@@ -4,162 +4,259 @@ import streamlit as st
 from googleapiclient.discovery import build
 
 # Configuração da página
-st.set_page_config(page_title="Analisador Completo de Shorts", layout="wide")
-st.title("📊 Analisador Avançado de YouTube Shorts")
+st.set_page_config(page_title="Analisador & Comparador de Shorts", layout="wide")
+st.title("📊 Analisador & Comparador de YouTube Shorts")
 
 # Puxa a chave de API (local pelo secrets.toml ou no Streamlit Cloud)
 api_key = st.secrets.get("YOUTUBE_API_KEY")
 
-# Sidebar - Parâmetros de Entrada
-st.sidebar.header("⚙️ Configurações da Busca")
-channel_id = st.sidebar.text_input("ID do Canal (ex: UCxxxx...):")
-max_results = st.sidebar.slider("Quantidade de vídeos para analisar:", 10, 100, 50, step=10)
+dias_semana_pt = {
+    'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 
+    'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 
+    'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
+}
 
-if channel_id and api_key:
-    try:
-        youtube = build('youtube', 'v3', developerKey=api_key)
+ordem_dias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
 
-        with st.spinner('Buscando e processando dados do YouTube...'):
-            # 1. Obter a playlist de uploads do canal
-            res = youtube.channels().list(id=channel_id, part='contentDetails,snippet').execute()
-            if not res['items']:
-                st.error("Canal não encontrado. Verifique o ID digitado.")
-                st.stop()
-                
-            nome_canal = res['items'][0]['snippet']['title']
-            playlist_id = res['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+# --- FUNÇÃO PRINCIPAL DE COLETA DE DADOS ---
+def buscar_dados_canal(youtube_api, channel_id, max_results):
+    res = youtube_api.channels().list(id=channel_id, part='contentDetails,snippet').execute()
+    if not res['items']:
+        return None, None
+        
+    nome_canal = res['items'][0]['snippet']['title']
+    playlist_id = res['items'][0]['contentDetails']['relatedPlaylists']['uploads']
 
-            # 2. Obter lista de vídeos
-            playlist_res = youtube.playlistItems().list(
-                playlistId=playlist_id,
-                part='snippet',
-                maxResults=max_results
-            ).execute()
+    playlist_res = youtube_api.playlistItems().list(
+        playlistId=playlist_id,
+        part='snippet',
+        maxResults=max_results
+    ).execute()
 
-            video_ids = [item['snippet']['resourceId']['videoId'] for item in playlist_res['items']]
+    video_ids = [item['snippet']['resourceId']['videoId'] for item in playlist_res['items']]
 
-            # 3. Obter estatísticas detalhadas dos vídeos
-            stats_res = youtube.videos().list(
-                id=','.join(video_ids),
-                part='snippet,statistics'
-            ).execute()
+    stats_res = youtube_api.videos().list(
+        id=','.join(video_ids),
+        part='snippet,statistics'
+    ).execute()
 
-            dados = []
-            dias_semana_pt = {
-                'Monday': 'Segunda-feira', 'Tuesday': 'Terça-feira', 
-                'Wednesday': 'Quarta-feira', 'Thursday': 'Quinta-feira', 
-                'Friday': 'Sexta-feira', 'Saturday': 'Sábado', 'Sunday': 'Domingo'
-            }
+    dados = []
+    for item in stats_res['items']:
+        data_utc = pd.to_datetime(item['snippet']['publishedAt'])
+        data_br = data_utc.tz_convert('America/Sao_Paulo')
+        
+        views = int(item['statistics'].get('viewCount', 0))
+        likes = int(item['statistics'].get('likeCount', 0))
+        
+        # Cálculo da taxa de engajamento individual por vídeo (%)
+        taxa_eng = (likes / views * 100) if views > 0 else 0.0
 
-            for item in stats_res['items']:
-                data_utc = pd.to_datetime(item['snippet']['publishedAt'])
-                data_br = data_utc.tz_convert('America/Sao_Paulo')
-                
-                dados.append({
-                    'Título': item['snippet']['title'],
-                    'Data': data_br.date(),
-                    'Dia da Semana': dias_semana_pt[data_br.strftime('%A')],
-                    'Hora_Cheia': f"{data_br.hour:02d}:00",
-                    'Visualizações': int(item['statistics'].get('viewCount', 0)),
-                    'Curtidas': int(item['statistics'].get('likeCount', 0)),
-                    'Comentários': int(item['statistics'].get('commentCount', 0)),
-                    'URL': f"https://www.youtube.com/shorts/{item['id']}"
-                })
+        dados.append({
+            'Canal': nome_canal,
+            'Título': item['snippet']['title'],
+            'Data': data_br.date(),
+            'Dia da Semana': dias_semana_pt[data_br.strftime('%A')],
+            'Hora_Cheia': f"{data_br.hour:02d}:00",
+            'Visualizações': views,
+            'Curtidas': likes,
+            'Taxa Engajamento (%)': round(taxa_eng, 2),
+            'Comentários': int(item['statistics'].get('commentCount', 0)),
+            'URL': f"https://www.youtube.com/shorts/{item['id']}"
+        })
 
-            df = pd.DataFrame(dados)
+    return nome_canal, pd.DataFrame(dados)
 
-        st.subheader(f"Canal Analisado: **{nome_canal}**")
 
-        # --- FILTROS DE DATA NA SIDEBAR ---
+# --- BARRA LATERAL (NAVEGAÇÃO) ---
+modo_app = st.sidebar.radio("Selecione a ferramenta:", ["Análise Única + Insights", "⚔️ Comparar 2 Canais"])
+max_results = st.sidebar.slider("Quantidade de vídeos por canal:", 10, 100, 50, step=10)
+
+if api_key:
+    youtube = build('youtube', 'v3', developerKey=api_key)
+
+    # =========================================================
+    # MODALIDADE 1: ANÁLISE ÚNICA + INSIGHTS
+    # =========================================================
+    if modo_app == "Análise Única + Insights":
+        channel_id = st.sidebar.text_input("ID do Canal (ex: UCxxxx...):")
+
+        if channel_id:
+            try:
+                with st.spinner('Buscando e processando dados...'):
+                    nome_canal, df = buscar_dados_canal(youtube, channel_id, max_results)
+
+                if df is None:
+                    st.error("Canal não encontrado. Verifique o ID digitado.")
+                else:
+                    st.subheader(f"Canal Analisado: **{nome_canal}**")
+
+                    # Filtro de Período
+                    st.sidebar.markdown("---")
+                    data_min, data_max = df['Data'].min(), df['Data'].max()
+                    data_inicio, data_fim = st.sidebar.date_input(
+                        "Filtrar Período:", value=(data_min, data_max), min_value=data_min, max_value=data_max
+                    )
+                    df_filtrado = df[(df['Data'] >= data_inicio) & (df['Data'] <= data_fim)]
+
+                    # Insights Inteligentes
+                    media_hora = df_filtrado.groupby('Hora_Cheia')['Visualizações'].mean().reset_index()
+                    melhor_horario = media_hora.sort_values(by='Visualizações', ascending=False).iloc[0]
+
+                    media_dia = df_filtrado.groupby('Dia da Semana')['Visualizações'].mean().reset_index()
+                    melhor_dia = media_dia.sort_values(by='Visualizações', ascending=False).iloc[0]
+
+                    st.markdown("### 🎯 Melhores Momentos do Canal")
+                    col_ins1, col_ins2 = st.columns(2)
+                    col_ins1.info(f"⏰ **Melhor Horário:** `{melhor_horario['Hora_Cheia']}` (Média de **{int(melhor_horario['Visualizações']):,}** views)")
+                    col_ins2.success(f"📅 **Melhor Dia:** `{melhor_dia['Dia da Semana']}` (Média de **{int(melhor_dia['Visualizações']):,}** views)")
+
+                    st.markdown("---")
+
+                    # Cálculo da Taxa Global de Engajamento
+                    tot_views = df_filtrado['Visualizações'].sum()
+                    tot_likes = df_filtrado['Curtidas'].sum()
+                    taxa_global = (tot_likes / tot_views * 100) if tot_views > 0 else 0.0
+
+                    # KPIs Básicos
+                    col1, col2, col3, col4, col5 = st.columns(5)
+                    col1.metric("Vídeos Analisados", len(df_filtrado))
+                    col2.metric("Total de Views", f"{df_filtrado['Visualizações'].sum():,}")
+                    col3.metric("Média de Views", f"{int(df_filtrado['Visualizações'].mean()):,}")
+                    col4.metric("Média de Curtidas", f"{int(df_filtrado['Curtidas'].mean()):,}")
+                    col5.metric("Engajamento Global", f"{taxa_global:.2f}%")
+
+                    st.markdown("---")
+
+                    # Gráficos em Abas
+                    aba1, aba2, aba3 = st.tabs(["⏰ Média por Horário", "📅 Média por Dia", "📈 Distribuição de Engajamento"])
+
+                    with aba1:
+                        fig_hora = px.bar(
+                            media_hora.sort_values(by='Hora_Cheia'), 
+                            x='Hora_Cheia', y='Visualizações',
+                            title="Média de Visualizações por Horário (Horário de Brasília)",
+                            color_discrete_sequence=['#FF0000']
+                        )
+                        fig_hora.update_layout(template="plotly_white")
+                        st.plotly_chart(fig_hora, use_container_width=True)
+
+                    with aba2:
+                        media_dia_ord = media_dia.set_index('Dia da Semana').reindex(ordem_dias).dropna().reset_index()
+                        fig_dia = px.bar(
+                            media_dia_ord, 
+                            x='Dia da Semana', y='Visualizações',
+                            title="Média de Visualizações por Dia da Semana",
+                            color_discrete_sequence=['#1E88E5']
+                        )
+                        fig_dia.update_layout(template="plotly_white")
+                        st.plotly_chart(fig_dia, use_container_width=True)
+
+                    with aba3:
+                        fig_eng_single = px.box(
+                            df_filtrado, 
+                            y='Taxa Engajamento (%)',
+                            points="all",
+                            title="Taxa de Engajamento por Short (% Curtidas/Views)",
+                            color_discrete_sequence=['#2E7D32']
+                        )
+                        fig_eng_single.update_layout(template="plotly_white")
+                        st.plotly_chart(fig_eng_single, use_container_width=True)
+
+                    # Tabela detalhada
+                    st.subheader("📋 Tabela Detalhada")
+                    st.dataframe(
+                        df_filtrado[['Título', 'Data', 'Dia da Semana', 'Hora_Cheia', 'Visualizações', 'Curtidas', 'Taxa Engajamento (%)', 'URL']], 
+                        use_container_width=True
+                    )
+
+            except Exception as e:
+                st.error(f"Erro ao carregar o canal: {e}")
+        else:
+            st.info("Digite o ID de um canal na barra lateral para começar.")
+
+    # =========================================================
+    # MODALIDADE 2: COMPARAR 2 CANAIS
+    # =========================================================
+    elif modo_app == "⚔️ Comparar 2 Canais":
         st.sidebar.markdown("---")
-        st.sidebar.header("📅 Filtros de Análise")
-        
-        data_min = df['Data'].min()
-        data_max = df['Data'].max()
-        
-        data_inicio, data_fim = st.sidebar.date_input(
-            "Filtrar Período:",
-            value=(data_min, data_max),
-            min_value=data_min,
-            max_value=data_max
-        )
+        id_canal1 = st.sidebar.text_input("ID do Canal 1:")
+        id_canal2 = st.sidebar.text_input("ID do Canal 2:")
 
-        # Aplicar filtro de data no DataFrame
-        df_filtrado = df[(df['Data'] >= data_inicio) & (df['Data'] <= data_fim)]
+        if id_canal1 and id_canal2:
+            try:
+                with st.spinner('Comparando canais...'):
+                    nome1, df1 = buscar_dados_canal(youtube, id_canal1, max_results)
+                    nome2, df2 = buscar_dados_canal(youtube, id_canal2, max_results)
 
-        if df_filtrado.empty:
-            st.warning("Nenhum vídeo encontrado no período selecionado.")
-            st.stop()
+                if df1 is None or df2 is None:
+                    st.error("Um ou ambos os IDs digitados são inválidos.")
+                else:
+                    st.subheader(f"⚔️ Comparativo: **{nome1}** vs **{nome2}**")
 
-        # --- METRICAS DE RESUMO (KPIs) ---
-        col1, col2, col3, col4 = st.columns(4)
-        col1.metric("Vídeos Analisados", len(df_filtrado))
-        col2.metric("Total de Visualizações", f"{df_filtrado['Visualizações'].sum():,}")
-        col3.metric("Média de Views / Short", f"{int(df_filtrado['Visualizações'].mean()):,}")
-        col4.metric("Média de Curtidas", f"{int(df_filtrado['Curtidas'].mean()):,}")
+                    # Cálculo das Taxas Globais de Engajamento
+                    v1, l1 = df1['Visualizações'].sum(), df1['Curtidas'].sum()
+                    taxa_global1 = (l1 / v1 * 100) if v1 > 0 else 0.0
 
-        st.markdown("---")
+                    v2, l2 = df2['Visualizações'].sum(), df2['Curtidas'].sum()
+                    taxa_global2 = (l2 / v2 * 100) if v2 > 0 else 0.0
 
-        # --- GRÁFICOS EM ABAS ---
-        aba1, aba2 = st.tabs(["⏰ Média por Horário", "📅 Média por Dia da Semana"])
+                    # KPIs Comparativos Side-by-Side
+                    col_c1, col_c2 = st.columns(2)
+                    with col_c1:
+                        st.markdown(f"### 🔴 {nome1}")
+                        st.metric("Média de Views", f"{int(df1['Visualizações'].mean()):,}")
+                        st.metric("Taxa de Engajamento Global", f"{taxa_global1:.2f}%")
+                    
+                    with col_c2:
+                        st.markdown(f"### 🔵 {nome2}")
+                        st.metric("Média de Views", f"{int(df2['Visualizações'].mean()):,}")
+                        st.metric("Taxa de Engajamento Global", f"{taxa_global2:.2f}%")
 
-        with aba1:
-            media_por_hora = df_filtrado.groupby('Hora_Cheia')['Visualizações'].mean().reset_index()
-            media_por_hora = media_por_hora.sort_values(by='Hora_Cheia')
+                    st.markdown("---")
 
-            fig_hora = px.bar(
-                media_por_hora, 
-                x='Hora_Cheia', 
-                y='Visualizações',
-                title="Média de Visualizações por Horário de Publicação (Horário de Brasília)",
-                labels={'Hora_Cheia': 'Horário do Upload', 'Visualizações': 'Média de Views'},
-                color_discrete_sequence=['#FF0000']
-            )
-            fig_hora.update_layout(template="plotly_white")
-            st.plotly_chart(fig_hora, use_container_width=True)
+                    df_comb = pd.concat([df1, df2])
 
-        with aba2:
-            ordem_dias = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo']
-            media_por_dia = df_filtrado.groupby('Dia da Semana')['Visualizações'].mean().reindex(ordem_dias).dropna().reset_index()
+                    # Gráfico Comparativo 1: Horários
+                    st.markdown("### ⏰ Média de Views por Horário")
+                    media_hora_comb = df_comb.groupby(['Canal', 'Hora_Cheia'])['Visualizações'].mean().reset_index()
+                    fig_comp_hora = px.bar(
+                        media_hora_comb, 
+                        x='Hora_Cheia', y='Visualizações', color='Canal', barmode='group',
+                        color_discrete_sequence=['#FF0000', '#1E88E5']
+                    )
+                    fig_comp_hora.update_layout(template="plotly_white")
+                    st.plotly_chart(fig_comp_hora, use_container_width=True)
 
-            fig_dia = px.bar(
-                media_por_dia, 
-                x='Dia da Semana', 
-                y='Visualizações',
-                title="Média de Visualizações por Dia da Semana",
-                labels={'Dia da Semana': 'Dia da Semana', 'Visualizações': 'Média de Views'},
-                color_discrete_sequence=['#1E88E5']
-            )
-            fig_dia.update_layout(template="plotly_white")
-            st.plotly_chart(fig_dia, use_container_width=True)
+                    # Gráfico Comparativo 2: Dias da Semana
+                    st.markdown("### 📅 Média de Views por Dia da Semana")
+                    media_dia_comb = df_comb.groupby(['Canal', 'Dia da Semana'])['Visualizações'].mean().reset_index()
+                    fig_comp_dia = px.bar(
+                        media_dia_comb, 
+                        x='Dia da Semana', y='Visualizações', color='Canal', barmode='group',
+                        category_orders={'Dia da Semana': ordem_dias},
+                        color_discrete_sequence=['#FF0000', '#1E88E5']
+                    )
+                    fig_comp_dia.update_layout(template="plotly_white")
+                    st.plotly_chart(fig_comp_dia, use_container_width=True)
 
-        st.markdown("---")
+                    # Gráfico Comparativo 3: Boxplot de Engajamento
+                    st.markdown("### 📊 Comparativo da Taxa de Engajamento por Short (%)")
+                    fig_eng = px.box(
+                        df_comb, 
+                        x='Canal', 
+                        y='Taxa Engajamento (%)', 
+                        color='Canal',
+                        points="all",
+                        title="Distribuição do Engajamento por Vídeo (Curtidas / Views)",
+                        color_discrete_sequence=['#FF0000', '#1E88E5']
+                    )
+                    fig_eng.update_layout(template="plotly_white")
+                    st.plotly_chart(fig_eng, use_container_width=True)
 
-        # --- TABELA DE DADOS DETALHADA ---
-        st.subheader("📋 Tabela Detalhada dos Vídeos")
-        
-        ordem_coluna = st.selectbox(
-            "Ordenar tabela por:",
-            ["Visualizações", "Curtidas", "Comentários", "Data"]
-        )
-        
-        df_exibicao = df_filtrado.sort_values(by=ordem_coluna, ascending=False)
-        
-        st.dataframe(
-            df_exibicao[['Título', 'Data', 'Dia da Semana', 'Hora_Cheia', 'Visualizações', 'Curtidas', 'Comentários', 'URL']],
-            use_container_width=True
-        )
+            except Exception as e:
+                st.error(f"Erro ao comparar canais: {e}")
+        else:
+            st.info("Digite os IDs de dois canais na barra lateral para ver o comparativo.")
 
-        # Botão para baixar CSV
-        csv = df_exibicao.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            label="📥 Baixar Tabela em CSV (Excel)",
-            data=csv,
-            file_name=f'analise_shorts_{nome_canal}.csv',
-            mime='text/csv',
-        )
-
-    except Exception as e:
-        st.error(f"Ocorreu um erro ao processar os dados: {e}")
 else:
-    st.info("Digite o ID de um canal na barra lateral esquerda para iniciar a análise.")
+    st.error("Chave de API não configurada.")
