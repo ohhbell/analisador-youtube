@@ -130,8 +130,9 @@ if api_key:
 
                     st.markdown("---")
 
-                    # Gráficos em Abas
-                    aba1, aba2, aba3, aba4 = st.tabs([
+                    # Gráficos e Tabelas em Abas
+                    aba1, aba2, aba3, aba4, aba5 = st.tabs([
+                        "🗓️ Agenda Semanal de Horários",
                         "🔥 Mapa de Calor (Dia x Hora)", 
                         "⏰ Média por Horário", 
                         "📅 Média por Dia", 
@@ -139,8 +140,26 @@ if api_key:
                     ])
 
                     with aba1:
+                        st.markdown("#### 📌 Horários de Postagem Identificados por Dia da Semana")
+                        st.write("Esta tabela mostra em quais horários o canal costuma publicar em cada dia, o volume de vídeos postados nesse horário e o desempenho médio gerado.")
+
+                        # Agrupa os dados por Dia da Semana e Horário
+                        agenda_df = df_filtrado.groupby(['Dia da Semana', 'Hora_Cheia']).agg(
+                            Qtd_Videos=('Visualizações', 'count'),
+                            Media_Views=('Visualizações', lambda x: int(x.mean()))
+                        ).reset_index()
+
+                        # Ordena os dias da semana na ordem cronológica correta
+                        agenda_df['Dia_Ordem'] = agenda_df['Dia da Semana'].map(lambda d: ordem_dias.index(d) if d in ordem_dias else 99)
+                        agenda_df = agenda_df.sort_values(by=['Dia_Ordem', 'Hora_Cheia']).drop(columns=['Dia_Ordem'])
+
+                        # Renomeia colunas para exibição limpa
+                        agenda_df.columns = ['Dia da Semana', 'Horário de Postagem', 'Qtd de Vídeos Postados', 'Média de Visualizações']
+
+                        st.dataframe(agenda_df, use_container_width=True)
+
+                    with aba2:
                         st.markdown("#### Média de Views por Combinação de Dia da Semana e Horário")
-                        # Prepara matriz pivô para o Heatmap
                         df_pivot = df_filtrado.pivot_table(
                             index='Dia da Semana', 
                             columns='Hora_Cheia', 
@@ -159,7 +178,7 @@ if api_key:
                         fig_heatmap.update_layout(template="plotly_white")
                         st.plotly_chart(fig_heatmap, use_container_width=True)
 
-                    with aba2:
+                    with aba3:
                         fig_hora = px.bar(
                             media_hora.sort_values(by='Hora_Cheia'), 
                             x='Hora_Cheia', y='Visualizações',
@@ -169,7 +188,7 @@ if api_key:
                         fig_hora.update_layout(template="plotly_white")
                         st.plotly_chart(fig_hora, use_container_width=True)
 
-                    with aba3:
+                    with aba4:
                         media_dia_ord = media_dia.set_index('Dia da Semana').reindex(ordem_dias).dropna().reset_index()
                         fig_dia = px.bar(
                             media_dia_ord, 
@@ -180,7 +199,7 @@ if api_key:
                         fig_dia.update_layout(template="plotly_white")
                         st.plotly_chart(fig_dia, use_container_width=True)
 
-                    with aba4:
+                    with aba5:
                         fig_eng_single = px.box(
                             df_filtrado, 
                             y='Taxa Engajamento (%)',
@@ -191,8 +210,8 @@ if api_key:
                         fig_eng_single.update_layout(template="plotly_white")
                         st.plotly_chart(fig_eng_single, use_container_width=True)
 
-                    # Tabela detalhada
-                    st.subheader("📋 Tabela Detalhada")
+                    # Tabela detalhada de todos os vídeos
+                    st.subheader("📋 Tabela Detalhada dos Vídeos")
                     st.dataframe(
                         df_filtrado[['Título', 'Data', 'Dia da Semana', 'Hora_Cheia', 'Visualizações', 'Curtidas', 'Taxa Engajamento (%)', 'URL']], 
                         use_container_width=True
