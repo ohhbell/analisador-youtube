@@ -48,7 +48,6 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
         views = int(item['statistics'].get('viewCount', 0))
         likes = int(item['statistics'].get('likeCount', 0))
         
-        # Cálculo da taxa de engajamento individual por vídeo (%)
         taxa_eng = (likes / views * 100) if views > 0 else 0.0
 
         dados.append({
@@ -105,19 +104,23 @@ if api_key:
                     media_dia = df_filtrado.groupby('Dia da Semana')['Visualizações'].mean().reset_index()
                     melhor_dia = media_dia.sort_values(by='Visualizações', ascending=False).iloc[0]
 
+                    # Cruzamento Dia x Horário
+                    matriz_cruzada = df_filtrado.groupby(['Dia da Semana', 'Hora_Cheia'])['Visualizações'].mean().reset_index()
+                    melhor_combinacao = matriz_cruzada.sort_values(by='Visualizações', ascending=False).iloc[0]
+
                     st.markdown("### 🎯 Melhores Momentos do Canal")
-                    col_ins1, col_ins2 = st.columns(2)
-                    col_ins1.info(f"⏰ **Melhor Horário:** `{melhor_horario['Hora_Cheia']}` (Média de **{int(melhor_horario['Visualizações']):,}** views)")
-                    col_ins2.success(f"📅 **Melhor Dia:** `{melhor_dia['Dia da Semana']}` (Média de **{int(melhor_dia['Visualizações']):,}** views)")
+                    col_ins1, col_ins2, col_ins3 = st.columns(3)
+                    col_ins1.info(f"⏰ **Melhor Horário Geral:** `{melhor_horario['Hora_Cheia']}`")
+                    col_ins2.success(f"📅 **Melhor Dia Geral:** `{melhor_dia['Dia da Semana']}`")
+                    col_ins3.warning(f"🔥 **Combinação Perfeita:** `{melhor_combinacao['Dia da Semana']}` às `{melhor_combinacao['Hora_Cheia']}`")
 
                     st.markdown("---")
 
-                    # Cálculo da Taxa Global de Engajamento
+                    # KPIs Básicos
                     tot_views = df_filtrado['Visualizações'].sum()
                     tot_likes = df_filtrado['Curtidas'].sum()
                     taxa_global = (tot_likes / tot_views * 100) if tot_views > 0 else 0.0
 
-                    # KPIs Básicos
                     col1, col2, col3, col4, col5 = st.columns(5)
                     col1.metric("Vídeos Analisados", len(df_filtrado))
                     col2.metric("Total de Views", f"{df_filtrado['Visualizações'].sum():,}")
@@ -128,9 +131,35 @@ if api_key:
                     st.markdown("---")
 
                     # Gráficos em Abas
-                    aba1, aba2, aba3 = st.tabs(["⏰ Média por Horário", "📅 Média por Dia", "📈 Distribuição de Engajamento"])
+                    aba1, aba2, aba3, aba4 = st.tabs([
+                        "🔥 Mapa de Calor (Dia x Hora)", 
+                        "⏰ Média por Horário", 
+                        "📅 Média por Dia", 
+                        "📈 Engajamento"
+                    ])
 
                     with aba1:
+                        st.markdown("#### Média de Views por Combinação de Dia da Semana e Horário")
+                        # Prepara matriz pivô para o Heatmap
+                        df_pivot = df_filtrado.pivot_table(
+                            index='Dia da Semana', 
+                            columns='Hora_Cheia', 
+                            values='Visualizações', 
+                            aggfunc='mean'
+                        ).reindex(ordem_dias).dropna(how='all')
+
+                        fig_heatmap = px.imshow(
+                            df_pivot,
+                            labels=dict(x="Horário do Upload", y="Dia da Semana", color="Média de Views"),
+                            x=df_pivot.columns,
+                            y=df_pivot.index,
+                            color_continuous_scale="Reds",
+                            aspect="auto"
+                        )
+                        fig_heatmap.update_layout(template="plotly_white")
+                        st.plotly_chart(fig_heatmap, use_container_width=True)
+
+                    with aba2:
                         fig_hora = px.bar(
                             media_hora.sort_values(by='Hora_Cheia'), 
                             x='Hora_Cheia', y='Visualizações',
@@ -140,7 +169,7 @@ if api_key:
                         fig_hora.update_layout(template="plotly_white")
                         st.plotly_chart(fig_hora, use_container_width=True)
 
-                    with aba2:
+                    with aba3:
                         media_dia_ord = media_dia.set_index('Dia da Semana').reindex(ordem_dias).dropna().reset_index()
                         fig_dia = px.bar(
                             media_dia_ord, 
@@ -151,7 +180,7 @@ if api_key:
                         fig_dia.update_layout(template="plotly_white")
                         st.plotly_chart(fig_dia, use_container_width=True)
 
-                    with aba3:
+                    with aba4:
                         fig_eng_single = px.box(
                             df_filtrado, 
                             y='Taxa Engajamento (%)',
@@ -193,14 +222,12 @@ if api_key:
                 else:
                     st.subheader(f"⚔️ Comparativo: **{nome1}** vs **{nome2}**")
 
-                    # Cálculo das Taxas Globais de Engajamento
                     v1, l1 = df1['Visualizações'].sum(), df1['Curtidas'].sum()
                     taxa_global1 = (l1 / v1 * 100) if v1 > 0 else 0.0
 
                     v2, l2 = df2['Visualizações'].sum(), df2['Curtidas'].sum()
                     taxa_global2 = (l2 / v2 * 100) if v2 > 0 else 0.0
 
-                    # KPIs Comparativos Side-by-Side
                     col_c1, col_c2 = st.columns(2)
                     with col_c1:
                         st.markdown(f"### 🔴 {nome1}")
