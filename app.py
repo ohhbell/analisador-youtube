@@ -86,34 +86,48 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* TABS PREMIUN (EFEITO BOTÃO DE DESTAQUE BRANCO QUANDO CLICADO) */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: #121215;
-            padding: 6px;
-            border-radius: 14px;
-            border: 1px solid #1c1c20;
-            display: inline-flex;
-            margin-bottom: 25px;
+        /* ESTILIZAÇÃO ULTRA FORÇADA DAS TABS (BOTÃO BRANCO ATIVO) */
+        div[data-baseweb="tab-list"] {
+            gap: 6px !important;
+            background-color: #121215 !important;
+            padding: 6px !important;
+            border-radius: 12px !important;
+            border: 1px solid #1c1c20 !important;
+            display: inline-flex !important;
+            margin-bottom: 25px !important;
         }
-        .stTabs [data-baseweb="tab"] {
-            height: 36px;
-            background-color: transparent;
+        
+        div[data-baseweb="tab-list"] button[role="tab"] {
+            height: 38px !important;
+            background-color: transparent !important;
             border: none !important;
-            border-radius: 10px !important;
+            border-radius: 8px !important;
+            padding: 0 20px !important;
+            transition: all 0.2s ease !important;
+        }
+
+        div[data-baseweb="tab-list"] button[role="tab"] p {
             color: #a1a1aa !important;
             font-size: 0.85rem !important;
             font-weight: 500 !important;
-            padding: 0 18px !important;
-            transition: all 0.2s ease;
         }
-        .stTabs [aria-selected="true"] {
-            background-color: #f4f4f5 !important;
-            color: #09090b !important;
+
+        div[data-baseweb="tab-list"] button[aria-selected="true"] {
+            background-color: #ffffff !important;
+            border-radius: 8px !important;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        div[data-baseweb="tab-list"] button[aria-selected="true"] p {
+            color: #000000 !important;
             font-weight: 700 !important;
-            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
         }
-        .stTabs [data-baseweb="tab-border-highlight"] {
+
+        div[data-baseweb="tab-highlight-point"] {
+            display: none !important;
+        }
+        
+        div[data-baseweb="tab-border-highlight"] {
             display: none !important;
         }
 
@@ -293,7 +307,7 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
 
   stats_res = (
       youtube_api.videos()
-      .list(id=','.join(video_ids), part='snippet,statistics')
+      .list(id=','.join(video_ids), part='snippet,statistics,contentDetails')
       .execute()
   )
 
@@ -305,6 +319,15 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
     views = int(item['statistics'].get('viewCount', 0))
     likes = int(item['statistics'].get('likeCount', 0))
     comentarios = int(item['statistics'].get('commentCount', 0))
+
+    # Identificação real do tipo do conteúdo no YouTube (Shorts vs Vídeo)
+    duration_iso = item.get('contentDetails', {}).get('duration', '')
+    is_short = (
+        'M' not in duration_iso
+        and 'H' not in duration_iso
+        and ('S' in duration_iso or duration_iso == 'PT0S')
+    )
+    tipo_conteudo = 'SHORTS' if is_short else 'VÍDEO'
 
     dados.append({
         'Canal': nome_canal,
@@ -343,8 +366,8 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
         'Visualizações': views,
         'Curtidas': likes,
         'Comentários': comentarios,
-        'Tipo': 'REELS',
-        'URL': f"https://www.youtube.com/shorts/{item['id']}",
+        'Tipo': tipo_conteudo,
+        'URL': f"https://www.youtube.com/watch?v={item['id']}",
     })
 
   return nome_canal, pd.DataFrame(dados)
@@ -424,7 +447,7 @@ if api_key:
                                 <div class="general-subtitle">Resumo de Performance</div>
                                 <div class="general-metrics-grid">
                                     <div class="submetric-box">
-                                        <div class="submetric-label">Shorts Analisados</div>
+                                        <div class="submetric-label">Conteúdos Analisados</div>
                                         <div class="submetric-value">{len(df_filtrado)}</div>
                                     </div>
                                     <div class="submetric-box">
@@ -495,7 +518,7 @@ if api_key:
                             <div class="general-card">
                                 <div class="general-subtitle">Comportamento Geral</div>
                                 <div class="general-desc">
-                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em Reels às <b>{hora_pico_str}</b>. Intervalo médio entre posts: 4.5h.
+                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em conteúdo às <b>{hora_pico_str}</b>. Intervalo médio entre posts: 4.5h.
                                 </div>
                                 <div class="general-metrics-grid">
                                     <div class="submetric-box">
@@ -511,8 +534,8 @@ if api_key:
                                         <div class="submetric-value">4.5h</div>
                                     </div>
                                     <div class="submetric-box">
-                                        <div class="submetric-label">Foco</div>
-                                        <div class="submetric-value">Reels • {total_posts} posts</div>
+                                        <div class="submetric-label">Total</div>
+                                        <div class="submetric-value">{total_posts} posts</div>
                                     </div>
                                 </div>
                             </div>
@@ -634,7 +657,7 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA PREMIUM (RENDERIZAÇÃO ISOLADA E CORRETA)
+          # ABA 4: TABELA PREMIUM (DESIGN COMPREENSÍVEL E ISOLADO)
           # =========================================================
           with tab_tabela:
             rows_html = ""
@@ -741,9 +764,10 @@ if api_key:
                         </html>
                         """
 
-            # Calcula a altura necessária dinamicamente para renderizar sem barras de rolagem estranhas
             altura_tabela = min(600, len(df_filtrado) * 45 + 50)
-            components.html(raw_table_code, height=altura_tabela, scrolling=True)
+            components.html(
+                raw_table_code, height=altura_tabela, scrolling=True
+            )
 
       except Exception as e:
         st.error(f"Erro ao carregar o canal: {e}")
