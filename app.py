@@ -5,13 +5,13 @@ import streamlit as st
 from googleapiclient.discovery import build
 
 # =========================================================
-# CONFIGURAÇÃO DE PÁGINA E CSS (EXATAMENTE COMO NA IMAGEM)
+# CONFIGURAÇÃO DE PÁGINA E CSS (DARK MINIMALISTA SAAS)
 # =========================================================
 st.set_page_config(
     page_title="Analisador de Horários",
     page_icon="🟢",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 st.markdown(
@@ -35,7 +35,9 @@ st.markdown(
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 10px 0 25px 0;
+            padding: 10px 0 20px 0;
+            border-bottom: 1px solid #1f1f23;
+            margin-bottom: 20px;
         }
         .app-title-box {
             display: flex;
@@ -220,88 +222,88 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Dicionários e constantes
+# Dicionários de Suporte
 dias_semana_pt = {
-    "Monday": "Segunda",
-    "Tuesday": "Terça",
-    "Wednesday": "Quarta",
-    "Thursday": "Quinta",
-    "Friday": "Sexta",
-    "Saturday": "Sábado",
-    "Sunday": "Domingo",
+    'Monday': 'Segunda',
+    'Tuesday': 'Terça',
+    'Wednesday': 'Quarta',
+    'Thursday': 'Quinta',
+    'Friday': 'Sexta',
+    'Saturday': 'Sábado',
+    'Sunday': 'Domingo',
 }
 
 ordem_dias = [
-    "Domingo",
-    "Segunda",
-    "Terça",
-    "Quarta",
-    "Quinta",
-    "Sexta",
-    "Sábado",
+    'Domingo',
+    'Segunda',
+    'Terça',
+    'Quarta',
+    'Quinta',
+    'Sexta',
+    'Sábado',
 ]
 
-api_key = st.secrets.get("YOUTUBE_API_KEY")
+api_key = st.secrets.get('YOUTUBE_API_KEY')
 
 
 # --- COLETA DE DADOS ---
 def buscar_dados_canal(youtube_api, channel_id, max_results):
   res = (
       youtube_api.channels()
-      .list(id=channel_id, part="contentDetails,snippet")
+      .list(id=channel_id, part='contentDetails,snippet')
       .execute()
   )
-  if not res["items"]:
+  if not res['items']:
     return None, None
 
-  nome_canal = res["items"][0]["snippet"]["title"]
-  playlist_id = res["items"][0]["contentDetails"]["relatedPlaylists"]["uploads"]
+  nome_canal = res['items'][0]['snippet']['title']
+  playlist_id = res['items'][0]['contentDetails']['relatedPlaylists']['uploads']
 
   playlist_res = (
       youtube_api.playlistItems()
-      .list(playlistId=playlist_id, part="snippet", maxResults=max_results)
+      .list(playlistId=playlist_id, part='snippet', maxResults=max_results)
       .execute()
   )
 
   video_ids = [
-      item["snippet"]["resourceId"]["videoId"] for item in playlist_res["items"]
+      item['snippet']['resourceId']['videoId'] for item in playlist_res['items']
   ]
 
   stats_res = (
       youtube_api.videos()
-      .list(id=",".join(video_ids), part="snippet,statistics")
+      .list(id=','.join(video_ids), part='snippet,statistics')
       .execute()
   )
 
   dados = []
-  for item in stats_res["items"]:
-    data_utc = pd.to_datetime(item["snippet"]["publishedAt"])
-    data_br = data_utc.tz_convert("America/Sao_Paulo")
+  for item in stats_res['items']:
+    data_utc = pd.to_datetime(item['snippet']['publishedAt'])
+    data_br = data_utc.tz_convert('America/Sao_Paulo')
 
-    views = int(item["statistics"].get("viewCount", 0))
-    likes = int(item["statistics"].get("likeCount", 0))
+    views = int(item['statistics'].get('viewCount', 0))
+    likes = int(item['statistics'].get('likeCount', 0))
     taxa_eng = (likes / views * 100) if views > 0 else 0.0
 
     minutos_do_dia = data_br.hour * 60 + data_br.minute
 
     dados.append({
-        "Canal": nome_canal,
-        "Título": item["snippet"]["title"],
-        "Data": data_br.date(),
-        "Dia da Semana": dias_semana_pt[data_br.strftime("%A")],
-        "Hora_Cheia": f"{data_br.hour:02d}h",
-        "Hora_Num": data_br.hour,
-        "Minutos_Dia": minutos_do_dia,
-        "Visualizações": views,
-        "Curtidas": likes,
-        "Taxa Engajamento (%)": round(taxa_eng, 2),
-        "URL": f"https://www.youtube.com/shorts/{item['id']}",
+        'Canal': nome_canal,
+        'Título': item['snippet']['title'],
+        'Data': data_br.date(),
+        'Dia da Semana': dias_semana_pt[data_br.strftime('%A')],
+        'Hora_Cheia': f'{data_br.hour:02d}h',
+        'Hora_Num': data_br.hour,
+        'Minutos_Dia': minutos_do_dia,
+        'Visualizações': views,
+        'Curtidas': likes,
+        'Taxa Engajamento (%)': round(taxa_eng, 2),
+        'URL': f"https://www.youtube.com/shorts/{item['id']}",
     })
 
   return nome_canal, pd.DataFrame(dados)
 
 
-# --- LAYOUT SUPERIOR (HEADER ESTILO SAAS) ---
+# --- HEADER SUPERIOR ---
 st.markdown(
     """
     <div class="app-header">
@@ -321,30 +323,40 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# BARRA LATERAL PARA CONTROLES
-st.sidebar.title("⚙️ Configurações")
-modo_app = st.sidebar.radio(
-    "Navegação:", ["Análise Única", "⚔️ Comparativo"]
-)
-max_results = st.sidebar.slider("Vídeos para analisar:", 10, 100, 50, step=10)
+# --- CAIXA DE BUSCA DE ID E PARÂMETROS NO TOPO ---
+col_search1, col_search2, col_search3 = st.columns([3, 1, 1])
+with col_search1:
+  channel_id = st.text_input(
+      "ID do Canal no YouTube:",
+      placeholder="Cole o ID do canal aqui (ex: UCxxxx...)",
+  )
+with col_search2:
+  max_results = st.selectbox(
+      "Analisar últimos:", [20, 30, 50, 100], index=2
+  )
+with col_search3:
+  modo_app = st.selectbox(
+      "Modo:", ["Análise Única", "⚔️ Comparativo"]
+  )
+
+st.markdown("---")
 
 if api_key:
   youtube = build("youtube", "v3", developerKey=api_key)
 
   if modo_app == "Análise Única":
-    channel_id = st.sidebar.text_input("ID do Canal:")
-
     if channel_id:
       try:
-        with st.spinner("Buscando dados..."):
+        with st.spinner("Buscando dados do canal..."):
           nome_canal, df = buscar_dados_canal(
               youtube, channel_id, max_results
           )
 
         if df is None:
-          st.error("Canal não encontrado.")
+          st.error("Canal não encontrado. Verifique se o ID está correto.")
         else:
-          # Filtro de Período
+          # Filtro de Período na barra lateral se quiser ajustar
+          st.sidebar.markdown("### 🗓️ Filtro de Período")
           data_min, data_max = df["Data"].min(), df["Data"].max()
           data_inicio, data_fim = st.sidebar.date_input(
               "Período:",
@@ -356,50 +368,18 @@ if api_key:
               (df["Data"] >= data_inicio) & (df["Data"] <= data_fim)
           ]
 
-          # ABAS DE NAVEGAÇÃO SUPERIORES
-          tab_geral, tab_padrao, tab_insights, tab_tabela = st.tabs([
-              "Visão Geral",
+          # NAVEGAÇÃO POR ABAS SUPERIORES
+          tab_padrao, tab_geral, tab_insights, tab_tabela = st.tabs([
               "Padrão por Dia",
+              "Visão Geral",
               "Insights Cruzados",
               "Tabela de Vídeos",
           ])
 
           # =========================================================
-          # ABA 1: VISÃO GERAL + COMPORTAMENTO GERAL
-          # =========================================================
-          with tab_geral:
-            st.markdown("### 📊 Visão Geral da Conta")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Shorts Analisados", len(df_filtrado))
-            c2.metric("Total de Views", f"{df_filtrado['Visualizações'].sum():,}")
-            c3.metric(
-                "Média de Views", f"{int(df_filtrado['Visualizações'].mean()):,}"
-            )
-            c4.metric(
-                "Média de Likes", f"{int(df_filtrado['Curtidas'].mean()):,}"
-            )
-
-            fig_bar = px.bar(
-                df_filtrado.groupby("Hora_Cheia")["Visualizações"]
-                .mean()
-                .reset_index(),
-                x="Hora_Cheia",
-                y="Visualizações",
-                title="Média de Views por Horário",
-                color_discrete_sequence=["#22c55e"],
-            )
-            fig_bar.update_layout(
-                template="plotly_dark",
-                paper_bgcolor="rgba(0,0,0,0)",
-                plot_bgcolor="rgba(0,0,0,0)",
-            )
-            st.plotly_chart(fig_bar, use_container_width=True)
-
-          # =========================================================
-          # ABA 2: PADRÃO POR DIA (ESTILO EXATO DA SUGESTÃO/IMAGEM)
+          # ABA 1: PADRÃO POR DIA (ESTILO EXATO DA SUGESTÃO/IMAGEM)
           # =========================================================
           with tab_padrao:
-            # Cálculos do Card "COMPORTAMENTO GERAL"
             total_posts = len(df_filtrado)
 
             # Janela mais frequente
@@ -424,7 +404,7 @@ if api_key:
             hora_pico = df_filtrado["Hora_Cheia"].mode()
             hora_pico_str = hora_pico.iloc[0] if not hora_pico.empty else "10h"
 
-            # 1. RENDERIZAR CARD COMPORTAMENTO GERAL
+            # 1. CARD COMPORTAMENTO GERAL
             st.markdown(
                 f"""
                             <div class="general-card">
@@ -455,7 +435,7 @@ if api_key:
                 unsafe_allow_html=True,
             )
 
-            # Título da Subseção
+            # Subtítulo da seção
             st.markdown(
                 """
                             <div class="section-header">
@@ -466,7 +446,7 @@ if api_key:
                 unsafe_allow_html=True,
             )
 
-            # 2. RENDERIZAR GRID 3 COLUNAS COM CARDS DIÁRIOS
+            # 2. GRID DE CARDS DIÁRIOS (3 COLUNAS)
             col1, col2, col3 = st.columns(3)
             colunas_grid = [col1, col2, col3]
 
@@ -477,29 +457,24 @@ if api_key:
               if not df_dia.empty:
                 qtd_posts = len(df_dia)
 
-                # Horário Mais Frequente
                 freq_hora = df_dia["Hora_Cheia"].mode()
                 hora_freq = freq_hora.iloc[0] if not freq_hora.empty else "N/A"
                 qtd_freq = (df_dia["Hora_Cheia"] == hora_freq).sum()
 
-                # Melhor Engajamento (Likes)
                 melhor_vid = df_dia.sort_values(
                     by="Curtidas", ascending=False
                 ).iloc[0]
                 melhor_hora = melhor_vid["Hora_Cheia"]
                 melhor_likes = melhor_vid["Curtidas"]
 
-                # Consistência (Desvio padrão em min)
                 if qtd_posts > 1:
                   desvio_min = int(np.std(df_dia["Minutos_Dia"]))
                   status_consist = f"±{desvio_min}min • Bem variável"
                 else:
                   status_consist = "Frequência Única"
 
-                # Média Likes
                 media_likes = int(df_dia["Curtidas"].mean())
 
-                # Card HTML idêntico ao layout escuro da imagem
                 card_html = f"""
                                 <div class="day-card">
                                     <div>
@@ -543,7 +518,38 @@ if api_key:
                 col_alvo.markdown(card_vazio, unsafe_allow_html=True)
 
           # =========================================================
-          # ABA 3: INSIGHTS CRUZADOS (HEATMAP)
+          # ABA 2: VISÃO GERAL
+          # =========================================================
+          with tab_geral:
+            st.markdown("### 📊 Visão Geral da Conta")
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Shorts Analisados", len(df_filtrado))
+            c2.metric("Total de Views", f"{df_filtrado['Visualizações'].sum():,}")
+            c3.metric(
+                "Média de Views", f"{int(df_filtrado['Visualizações'].mean()):,}"
+            )
+            c4.metric(
+                "Média de Likes", f"{int(df_filtrado['Curtidas'].mean()):,}"
+            )
+
+            fig_bar = px.bar(
+                df_filtrado.groupby("Hora_Cheia")["Visualizações"]
+                .mean()
+                .reset_index(),
+                x="Hora_Cheia",
+                y="Visualizações",
+                title="Média de Views por Horário",
+                color_discrete_sequence=["#22c55e"],
+            )
+            fig_bar.update_layout(
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+          # =========================================================
+          # ABA 3: INSIGHTS CRUZADOS
           # =========================================================
           with tab_insights:
             st.markdown("### 🔥 Mapa de Calor Cruzado")
@@ -593,12 +599,46 @@ if api_key:
             )
 
       except Exception as e:
-        st.error(f"Erro ao carregar canal: {e}")
+        st.error(f"Erro ao carregar o canal: {e}")
     else:
-      st.info("Digite o ID do canal na barra lateral para começar.")
+      st.info(
+          "👆 Digite ou cole o **ID do Canal** na caixa no topo da tela para"
+          " iniciar a análise."
+      )
 
   elif modo_app == "⚔️ Comparativo":
-    st.info("Insira dois IDs na barra lateral para abrir a visão comparativa.")
+    st.markdown("### ⚔️ Comparar Dois Canais")
+    col_c1, col_c2 = st.columns(2)
+    id1 = col_c1.text_input("ID do Canal 1:")
+    id2 = col_c2.text_input("ID do Canal 2:")
+
+    if id1 and id2:
+      try:
+        with st.spinner("Buscando dados comparativos..."):
+          nome1, df1 = buscar_dados_canal(youtube, id1, max_results)
+          nome2, df2 = buscar_dados_canal(youtube, id2, max_results)
+
+        if df1 is not None and df2 is not None:
+          st.subheader(f"{nome1} vs {nome2}")
+          df_comb = pd.concat([df1, df2])
+          fig_comp = px.bar(
+              df_comb.groupby(["Canal", "Hora_Cheia"])["Visualizações"]
+              .mean()
+              .reset_index(),
+              x="Hora_Cheia",
+              y="Visualizações",
+              color="Canal",
+              barmode="group",
+              color_discrete_sequence=["#22c55e", "#38bdf8"],
+          )
+          fig_comp.update_layout(
+              template="plotly_dark",
+              paper_bgcolor="rgba(0,0,0,0)",
+              plot_bgcolor="rgba(0,0,0,0)",
+          )
+          st.plotly_chart(fig_comp, use_container_width=True)
+      except Exception as e:
+        st.error(f"Erro no comparativo: {e}")
 
 else:
-  st.error("Configure sua YOUTUBE_API_KEY no secrets.toml.")
+  st.error("Chave YOUTUBE_API_KEY não encontrada nos secrets.")
