@@ -2,10 +2,11 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import streamlit.components.v1 as components
 from googleapiclient.discovery import build
 
 # =========================================================
-# CONFIGURAÇÃO DE PÁGINA E CSS PREMIUM (IDÊNTICO ÀS IMAGENS)
+# CONFIGURAÇÃO DE PÁGINA E CSS PREMIUM
 # =========================================================
 st.set_page_config(
     page_title="Analisador de Horários",
@@ -85,30 +86,32 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* ESTILO DOS BOTÕES DE NAVEGAÇÃO (TABS IGUAIS À IMAGEM 2) */
+        /* TABS PREMIUN (EFEITO BOTÃO DE DESTAQUE BRANCO QUANDO CLICADO) */
         .stTabs [data-baseweb="tab-list"] {
             gap: 8px;
             background-color: #121215;
-            padding: 5px;
-            border-radius: 12px;
+            padding: 6px;
+            border-radius: 14px;
             border: 1px solid #1c1c20;
             display: inline-flex;
             margin-bottom: 25px;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 34px;
+            height: 36px;
             background-color: transparent;
             border: none !important;
-            border-radius: 8px !important;
+            border-radius: 10px !important;
             color: #a1a1aa !important;
             font-size: 0.85rem !important;
             font-weight: 500 !important;
-            padding: 0 16px !important;
+            padding: 0 18px !important;
+            transition: all 0.2s ease;
         }
         .stTabs [aria-selected="true"] {
-            background-color: #27272a !important;
-            color: #ffffff !important;
-            font-weight: 600 !important;
+            background-color: #f4f4f5 !important;
+            color: #09090b !important;
+            font-weight: 700 !important;
+            box-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
         }
         .stTabs [data-baseweb="tab-border-highlight"] {
             display: none !important;
@@ -236,64 +239,6 @@ st.markdown(
             padding-top: 10px;
             margin-top: 6px;
         }
-
-        /* TABELA PREMIUM (ESTILO IGUAL À IMAGEM 1) */
-        .custom-table-container {
-            width: 100%;
-            overflow-x: auto;
-            border: 1px solid #1c1c20;
-            border-radius: 10px;
-            background-color: #0c0c0e;
-        }
-        .custom-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.85rem;
-            color: #a1a1aa;
-            text-align: left;
-        }
-        .custom-table th {
-            background-color: #121215;
-            color: #71717a;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            padding: 12px 16px;
-            border-bottom: 1px solid #1c1c20;
-        }
-        .custom-table td {
-            padding: 12px 16px;
-            border-bottom: 1px solid #16161a;
-            white-space: nowrap;
-        }
-        .custom-table tr:last-child td {
-            border-bottom: none;
-        }
-        .custom-table tr:hover {
-            background-color: #121215;
-        }
-        .td-likes {
-            color: #22c55e !important;
-            font-weight: 700;
-        }
-        .badge-type {
-            background-color: #18181b;
-            color: #71717a;
-            border: 1px solid #27272a;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            letter-spacing: 0.05em;
-        }
-        .td-caption {
-            max-width: 320px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #d4d4d8;
-        }
     </style>
 """,
     unsafe_allow_html=True,
@@ -398,7 +343,7 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
         'Visualizações': views,
         'Curtidas': likes,
         'Comentários': comentarios,
-        'Tipo': 'REELS',  # Formatação visual igual ao print
+        'Tipo': 'REELS',
         'URL': f"https://www.youtube.com/shorts/{item['id']}",
     })
 
@@ -461,7 +406,7 @@ if api_key:
         else:
           df_filtrado = df
 
-          # BOTÕES DE ALTERNÂNCIA SUPERIORES (TABELAS DE VISÃO GERAL, PADRÃO E TABELA)
+          # BOTÕES DE ALTERNÂNCIA SUPERIORES
           tab_geral, tab_padrao, tab_insights, tab_tabela = st.tabs([
               "Visão Geral",
               "Padrão por Dia",
@@ -518,7 +463,7 @@ if api_key:
             st.plotly_chart(fig_bar, use_container_width=True)
 
           # =========================================================
-          # ABA 2: PADRÃO POR DIA (IMAGEM 2)
+          # ABA 2: PADRÃO POR DIA
           # =========================================================
           with tab_padrao:
             total_posts = len(df_filtrado)
@@ -689,10 +634,9 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA PREMIUM (RECRIAÇÃO EXATA DA IMAGEM 1)
+          # ABA 4: TABELA PREMIUM (RENDERIZAÇÃO ISOLADA E CORRETA)
           # =========================================================
           with tab_tabela:
-            # Construção do HTML da Tabela com Design Premium
             rows_html = ""
             for _, row in df_filtrado.iterrows():
               rows_html += f"""
@@ -707,27 +651,99 @@ if api_key:
                             </tr>
                             """
 
-            table_html = f"""
-                        <div class="custom-table-container">
-                            <table class="custom-table">
-                                <thead>
-                                    <tr>
-                                        <th>DATA SP</th>
-                                        <th>DIA</th>
-                                        <th>HORA</th>
-                                        <th>LIKES</th>
-                                        <th>COMENT.</th>
-                                        <th>TIPO</th>
-                                        <th>LEGENDA</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rows_html}
-                                </tbody>
-                            </table>
-                        </div>
+            raw_table_code = f"""
+                        <!DOCTYPE html>
+                        <html>
+                        <head>
+                        <style>
+                            body {{
+                                background-color: transparent;
+                                color: #a1a1aa;
+                                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                                margin: 0;
+                                padding: 0;
+                            }}
+                            .custom-table-container {{
+                                width: 100%;
+                                overflow-x: auto;
+                                border: 1px solid #1c1c20;
+                                border-radius: 10px;
+                                background-color: #0c0c0e;
+                            }}
+                            .custom-table {{
+                                width: 100%;
+                                border-collapse: collapse;
+                                font-size: 0.83rem;
+                                color: #a1a1aa;
+                                text-align: left;
+                            }}
+                            .custom-table th {{
+                                background-color: #121215;
+                                color: #71717a;
+                                font-size: 0.7rem;
+                                font-weight: 700;
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                                padding: 12px 16px;
+                                border-bottom: 1px solid #1c1c20;
+                            }}
+                            .custom-table td {{
+                                padding: 12px 16px;
+                                border-bottom: 1px solid #16161a;
+                                white-space: nowrap;
+                            }}
+                            .custom-table tr:hover {{
+                                background-color: #121215;
+                            }}
+                            .td-likes {{
+                                color: #22c55e !important;
+                                font-weight: 700;
+                            }}
+                            .badge-type {{
+                                background-color: #18181b;
+                                color: #71717a;
+                                border: 1px solid #27272a;
+                                padding: 2px 8px;
+                                border-radius: 10px;
+                                font-size: 0.65rem;
+                                font-weight: 700;
+                                letter-spacing: 0.05em;
+                            }}
+                            .td-caption {{
+                                max-width: 400px;
+                                overflow: hidden;
+                                text-overflow: ellipsis;
+                                white-space: nowrap;
+                                color: #d4d4d8;
+                            }}
+                        </style>
+                        </head>
+                        <body>
+                            <div class="custom-table-container">
+                                <table class="custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>DATA SP</th>
+                                            <th>DIA</th>
+                                            <th>HORA</th>
+                                            <th>LIKES</th>
+                                            <th>COMENT.</th>
+                                            <th>TIPO</th>
+                                            <th>LEGENDA</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {rows_html}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </body>
+                        </html>
                         """
-            st.markdown(table_html, unsafe_allow_html=True)
+
+            # Calcula a altura necessária dinamicamente para renderizar sem barras de rolagem estranhas
+            altura_tabela = min(600, len(df_filtrado) * 45 + 50)
+            components.html(raw_table_code, height=altura_tabela, scrolling=True)
 
       except Exception as e:
         st.error(f"Erro ao carregar o canal: {e}")
