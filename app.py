@@ -723,7 +723,7 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA PREMIUM (TEMA YOUTUBE RED)
+          # ABA 4: TABELA PREMIUM COM BOTÃO CLICÁVEL PRO VÍDEO
           # =========================================================
           with tab_tabela:
             rows_html = ""
@@ -737,6 +737,11 @@ if api_key:
                                 <td>{row['Comentários']:,}</td>
                                 <td><span class="badge-type">{row['Tipo']}</span></td>
                                 <td class="td-caption" title="{row['Título']}">{row['Título']}</td>
+                                <td>
+                                    <a href="{row['URL']}" target="_blank" class="btn-watch">
+                                        Assistir ↗
+                                    </a>
+                                </td>
                             </tr>
                             """
 
@@ -780,6 +785,7 @@ if api_key:
                                 padding: 12px 16px;
                                 border-bottom: 1px solid #16161e;
                                 white-space: nowrap;
+                                vertical-align: middle;
                             }}
                             .custom-table tr:hover {{
                                 background-color: #14141c;
@@ -799,11 +805,30 @@ if api_key:
                                 letter-spacing: 0.05em;
                             }}
                             .td-caption {{
-                                max-width: 400px;
+                                max-width: 350px;
                                 overflow: hidden;
                                 text-overflow: ellipsis;
                                 white-space: nowrap;
                                 color: #d4d4d8;
+                            }}
+                            /* ESTILO DO BOTÃO DE LINK DO VÍDEO */
+                            .btn-watch {{
+                                display: inline-block;
+                                background-color: #270909;
+                                color: #ef4444 !important;
+                                border: 1px solid #7f1d1d;
+                                padding: 4px 10px;
+                                border-radius: 6px;
+                                font-size: 0.72rem;
+                                font-weight: 600;
+                                text-decoration: none;
+                                transition: all 0.2s ease;
+                            }}
+                            .btn-watch:hover {{
+                                background-color: #ef4444;
+                                color: #ffffff !important;
+                                border-color: #ef4444;
+                                box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
                             }}
                         </style>
                         </head>
@@ -818,7 +843,8 @@ if api_key:
                                             <th>LIKES</th>
                                             <th>COMENT.</th>
                                             <th>TIPO</th>
-                                            <th>LEGENDA</th>
+                                            <th>TÍTULO</th>
+                                            <th>LINK</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -830,7 +856,7 @@ if api_key:
                         </html>
                         """
 
-            altura_tabela = min(600, len(df_filtrado) * 45 + 50)
+            altura_tabela = min(600, len(df_filtrado) * 48 + 50)
             components.html(
                 raw_table_code, height=altura_tabela, scrolling=True
             )
