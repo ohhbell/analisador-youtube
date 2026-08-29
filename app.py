@@ -5,7 +5,7 @@ import streamlit as st
 from googleapiclient.discovery import build
 
 # =========================================================
-# CONFIGURAÇÃO DE PÁGINA E CSS UNIFICADO (DESIGN 100% IGUAL AOS CARDS)
+# CONFIGURAÇÃO DE PÁGINA E CSS PREMIUM (IDÊNTICO ÀS IMAGENS)
 # =========================================================
 st.set_page_config(
     page_title="Analisador de Horários",
@@ -19,7 +19,7 @@ st.markdown(
     <style>
         /* Fundo Geral Ultra Escuro */
         .stApp {
-            background-color: #0c0c0e !important;
+            background-color: #08080a !important;
             color: #a1a1aa !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
@@ -30,11 +30,11 @@ st.markdown(
         header {visibility: hidden;}
         .stDeployButton {display:none;}
 
-        /* Estilização Completa dos Inputs (Caixas de texto e Seleção) */
+        /* Estilização dos Inputs superiores */
         .stTextInput input, .stSelectbox > div > div {
-            background-color: #141417 !important;
+            background-color: #121215 !important;
             color: #f4f4f5 !important;
-            border: 1px solid #27272a !important;
+            border: 1px solid #222226 !important;
             border-radius: 8px !important;
         }
         .stTextInput input:focus, .stSelectbox > div > div:focus {
@@ -47,14 +47,13 @@ st.markdown(
             font-weight: 500 !important;
         }
 
-        /* Cabeçalho Superior do App */
+        /* Header Principal Superior */
         .app-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 10px 0 20px 0;
-            border-bottom: 1px solid #1f1f23;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .app-title-box {
             display: flex;
@@ -86,10 +85,39 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* Card de Comportamento Geral */
+        /* ESTILO DOS BOTÕES DE NAVEGAÇÃO (TABS IGUAIS À IMAGEM 2) */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 8px;
+            background-color: #121215;
+            padding: 5px;
+            border-radius: 12px;
+            border: 1px solid #1c1c20;
+            display: inline-flex;
+            margin-bottom: 25px;
+        }
+        .stTabs [data-baseweb="tab"] {
+            height: 34px;
+            background-color: transparent;
+            border: none !important;
+            border-radius: 8px !important;
+            color: #a1a1aa !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+            padding: 0 16px !important;
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: #27272a !important;
+            color: #ffffff !important;
+            font-weight: 600 !important;
+        }
+        .stTabs [data-baseweb="tab-border-highlight"] {
+            display: none !important;
+        }
+
+        /* CARD COMPORTAMENTO GERAL */
         .general-card {
-            background-color: #141417;
-            border: 1px solid #27272a;
+            background-color: #121215;
+            border: 1px solid #1c1c20;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 25px;
@@ -114,8 +142,8 @@ st.markdown(
             gap: 12px;
         }
         .submetric-box {
-            background-color: #0c0c0e;
-            border: 1px solid #27272a;
+            background-color: #08080a;
+            border: 1px solid #1c1c20;
             border-radius: 8px;
             padding: 12px 14px;
         }
@@ -132,7 +160,7 @@ st.markdown(
             color: #f4f4f5;
         }
 
-        /* Título de Seção */
+        /* CARDS POR DIA DA SEMANA */
         .section-header {
             margin-top: 10px;
             margin-bottom: 16px;
@@ -149,10 +177,9 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* Cards Diários */
         .day-card {
-            background-color: #141417;
-            border: 1px solid #242427;
+            background-color: #121215;
+            border: 1px solid #1c1c20;
             border-radius: 10px;
             padding: 16px;
             margin-bottom: 16px;
@@ -183,7 +210,6 @@ st.markdown(
             font-weight: 600;
         }
 
-        /* Linhas de Métricas no Card */
         .metric-item {
             display: flex;
             justify-content: space-between;
@@ -203,44 +229,70 @@ st.markdown(
             font-weight: 600;
         }
 
-        /* Rodapé do Card */
         .card-footer-summary {
             font-size: 0.75rem;
             color: #71717a;
-            border-top: 1px dashed #27272a;
+            border-top: 1px dashed #1c1c20;
             padding-top: 10px;
             margin-top: 6px;
         }
 
-        /* Customização de Tabs estilo Pill Button Dark */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 8px;
-            background-color: transparent;
-            margin-bottom: 20px;
-            border-bottom: none !important;
+        /* TABELA PREMIUM (ESTILO IGUAL À IMAGEM 1) */
+        .custom-table-container {
+            width: 100%;
+            overflow-x: auto;
+            border: 1px solid #1c1c20;
+            border-radius: 10px;
+            background-color: #0c0c0e;
         }
-        .stTabs [data-baseweb="tab"] {
-            height: 36px;
-            background-color: #141417;
-            border: 1px solid #27272a;
-            border-radius: 8px;
-            color: #a1a1aa;
+        .custom-table {
+            width: 100%;
+            border-collapse: collapse;
             font-size: 0.85rem;
-            font-weight: 500;
-            padding: 0 16px;
+            color: #a1a1aa;
+            text-align: left;
         }
-        .stTabs [aria-selected="true"] {
-            background-color: #f4f4f5 !important;
-            color: #09090b !important;
-            font-weight: 600 !important;
-            border-color: #f4f4f5 !important;
+        .custom-table th {
+            background-color: #121215;
+            color: #71717a;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 12px 16px;
+            border-bottom: 1px solid #1c1c20;
         }
-
-        /* Customização de Tabelas */
-        [data-testid="stDataFrame"] {
-            background-color: #141417 !important;
-            border: 1px solid #27272a !important;
-            border-radius: 10px !important;
+        .custom-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #16161a;
+            white-space: nowrap;
+        }
+        .custom-table tr:last-child td {
+            border-bottom: none;
+        }
+        .custom-table tr:hover {
+            background-color: #121215;
+        }
+        .td-likes {
+            color: #22c55e !important;
+            font-weight: 700;
+        }
+        .badge-type {
+            background-color: #18181b;
+            color: #71717a;
+            border: 1px solid #27272a;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .td-caption {
+            max-width: 320px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #d4d4d8;
         }
     </style>
 """,
@@ -249,13 +301,13 @@ st.markdown(
 
 # Dicionários de Suporte
 dias_semana_pt = {
-    'Monday': 'Segunda',
-    'Tuesday': 'Terça',
-    'Wednesday': 'Quarta',
-    'Thursday': 'Quinta',
-    'Friday': 'Sexta',
-    'Saturday': 'Sábado',
-    'Sunday': 'Domingo',
+    'Monday': 'Seg',
+    'Tuesday': 'Ter',
+    'Wednesday': 'Qua',
+    'Thursday': 'Qui',
+    'Friday': 'Sex',
+    'Saturday': 'Sáb',
+    'Sunday': 'Dom',
 }
 
 ordem_dias = [
@@ -307,28 +359,53 @@ def buscar_dados_canal(youtube_api, channel_id, max_results):
 
     views = int(item['statistics'].get('viewCount', 0))
     likes = int(item['statistics'].get('likeCount', 0))
-    taxa_eng = (likes / views * 100) if views > 0 else 0.0
-
-    minutos_do_dia = data_br.hour * 60 + data_br.minute
+    comentarios = int(item['statistics'].get('commentCount', 0))
 
     dados.append({
         'Canal': nome_canal,
         'Título': item['snippet']['title'],
+        'Data_Formatada': data_br.strftime('%d/%m/%Y %H:%M'),
         'Data': data_br.date(),
-        'Dia da Semana': dias_semana_pt[data_br.strftime('%A')],
-        'Hora_Cheia': f'{data_br.hour:02d}h',
+        'Dia': dias_semana_pt[data_br.strftime('%A')],
+        'Dia_Completo': (
+            'Domingo'
+            if data_br.strftime('%A') == 'Sunday'
+            else (
+                'Segunda'
+                if data_br.strftime('%A') == 'Monday'
+                else (
+                    'Terça'
+                    if data_br.strftime('%A') == 'Tuesday'
+                    else (
+                        'Quarta'
+                        if data_br.strftime('%A') == 'Wednesday'
+                        else (
+                            'Quinta'
+                            if data_br.strftime('%A') == 'Thursday'
+                            else (
+                                'Sexta'
+                                if data_br.strftime('%A') == 'Friday'
+                                else 'Sábado'
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        'Hora_Cheia': f'{data_br.hour:02d}:00',
         'Hora_Num': data_br.hour,
-        'Minutos_Dia': minutos_do_dia,
+        'Minutos_Dia': data_br.hour * 60 + data_br.minute,
         'Visualizações': views,
         'Curtidas': likes,
-        'Taxa Engajamento (%)': round(taxa_eng, 2),
+        'Comentários': comentarios,
+        'Tipo': 'REELS',  # Formatação visual igual ao print
         'URL': f"https://www.youtube.com/shorts/{item['id']}",
     })
 
   return nome_canal, pd.DataFrame(dados)
 
 
-# --- HEADER SUPERIOR ---
+# --- HEADER PRINCIPAL ---
 st.markdown(
     """
     <div class="app-header">
@@ -348,7 +425,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- CAIXA DE BUSCA NO MESMO DESIGN DA PÁGINA ---
+# --- ENTRADAS DE DADOS NO TOPO ---
 col_search1, col_search2, col_search3 = st.columns([3, 1, 1])
 with col_search1:
   channel_id = st.text_input(
@@ -365,7 +442,7 @@ with col_search3:
   )
 
 st.markdown(
-    "<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True
+    "<div style='margin-bottom: 10px;'></div>", unsafe_allow_html=True
 )
 
 if api_key:
@@ -384,157 +461,16 @@ if api_key:
         else:
           df_filtrado = df
 
-          # NAVEGAÇÃO POR ABAS SUPERIORES
-          tab_padrao, tab_geral, tab_insights, tab_tabela = st.tabs([
-              "Padrão por Dia",
+          # BOTÕES DE ALTERNÂNCIA SUPERIORES (TABELAS DE VISÃO GERAL, PADRÃO E TABELA)
+          tab_geral, tab_padrao, tab_insights, tab_tabela = st.tabs([
               "Visão Geral",
+              "Padrão por Dia",
               "Insights Cruzados",
               "Tabela de Vídeos",
           ])
 
           # =========================================================
-          # ABA 1: PADRÃO POR DIA
-          # =========================================================
-          with tab_padrao:
-            total_posts = len(df_filtrado)
-
-            # Janela mais frequente
-            df_filtrado["Faixa_Horario"] = pd.cut(
-                df_filtrado["Hora_Num"],
-                bins=[-1, 5, 8, 12, 17, 21, 24],
-                labels=[
-                    "00h–05h",
-                    "06h–08h",
-                    "09h–12h",
-                    "13h–17h",
-                    "18h–21h",
-                    "22h–23h",
-                ],
-            )
-            faixa_top = df_filtrado["Faixa_Horario"].mode()
-            faixa_str = faixa_top.iloc[0] if not faixa_top.empty else "09h–12h"
-            posts_faixa = (df_filtrado["Faixa_Horario"] == faixa_str).sum()
-            pct_faixa = int((posts_faixa / total_posts) * 100)
-
-            # Horário Pico
-            hora_pico = df_filtrado["Hora_Cheia"].mode()
-            hora_pico_str = hora_pico.iloc[0] if not hora_pico.empty else "10h"
-
-            # 1. CARD COMPORTAMENTO GERAL
-            st.markdown(
-                f"""
-                            <div class="general-card">
-                                <div class="general-subtitle">Comportamento Geral</div>
-                                <div class="general-desc">
-                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em Shorts às <b>{hora_pico_str}</b>.
-                                </div>
-                                <div class="general-metrics-grid">
-                                    <div class="submetric-box">
-                                        <div class="submetric-label">Janela {pct_faixa}%</div>
-                                        <div class="submetric-value">{faixa_str}</div>
-                                    </div>
-                                    <div class="submetric-box">
-                                        <div class="submetric-label">Cobertura</div>
-                                        <div class="submetric-value">{pct_faixa}% dos posts</div>
-                                    </div>
-                                    <div class="submetric-box">
-                                        <div class="submetric-label">Intervalo Médio</div>
-                                        <div class="submetric-value">4.5h</div>
-                                    </div>
-                                    <div class="submetric-box">
-                                        <div class="submetric-label">Foco</div>
-                                        <div class="submetric-value">Shorts • {total_posts} posts</div>
-                                    </div>
-                                </div>
-                            </div>
-                            """,
-                unsafe_allow_html=True,
-            )
-
-            # Subtítulo da seção
-            st.markdown(
-                """
-                            <div class="section-header">
-                                <h3>Padrão por Dia da Semana</h3>
-                                <p>Para cada dia, horário mais frequente, melhor engajamento, consistência e total</p>
-                            </div>
-                            """,
-                unsafe_allow_html=True,
-            )
-
-            # 2. GRID DE CARDS DIÁRIOS (3 COLUNAS)
-            col1, col2, col3 = st.columns(3)
-            colunas_grid = [col1, col2, col3]
-
-            for idx, dia in enumerate(ordem_dias):
-              df_dia = df_filtrado[df_filtrado["Dia da Semana"] == dia]
-              col_alvo = colunas_grid[idx % 3]
-
-              if not df_dia.empty:
-                qtd_posts = len(df_dia)
-
-                freq_hora = df_dia["Hora_Cheia"].mode()
-                hora_freq = freq_hora.iloc[0] if not freq_hora.empty else "N/A"
-                qtd_freq = (df_dia["Hora_Cheia"] == hora_freq).sum()
-
-                melhor_vid = df_dia.sort_values(
-                    by="Curtidas", ascending=False
-                ).iloc[0]
-                melhor_hora = melhor_vid["Hora_Cheia"]
-                melhor_likes = melhor_vid["Curtidas"]
-
-                if qtd_posts > 1:
-                  desvio_min = int(np.std(df_dia["Minutos_Dia"]))
-                  status_consist = f"±{desvio_min}min • Bem variável"
-                else:
-                  status_consist = "Frequência Única"
-
-                media_likes = int(df_dia["Curtidas"].mean())
-
-                card_html = f"""
-                                <div class="day-card">
-                                    <div>
-                                        <div class="day-header">
-                                            <span class="day-title">{dia}</span>
-                                            <span class="day-badge-green">{qtd_posts} posts</span>
-                                        </div>
-                                        <div class="metric-item">
-                                            <span class="metric-name">Mais frequente</span>
-                                            <span class="metric-val">{hora_freq} ({qtd_freq}x)</span>
-                                        </div>
-                                        <div class="metric-item">
-                                            <span class="metric-name">Melhor engaj.</span>
-                                            <span class="metric-val text-green">{melhor_hora} • {melhor_likes:,} likes</span>
-                                        </div>
-                                        <div class="metric-item">
-                                            <span class="metric-name">Consistência</span>
-                                            <span class="metric-val">{status_consist}</span>
-                                        </div>
-                                        <div class="metric-item">
-                                            <span class="metric-name">Média dia</span>
-                                            <span class="metric-val">{media_likes:,} likes</span>
-                                        </div>
-                                    </div>
-                                    <div class="card-footer-summary">
-                                        {dia[:3].capitalize()}: posta sempre {hora_freq} {status_consist.split('•')[0]}, melhor engajamento {melhor_hora}
-                                    </div>
-                                </div>
-                                """
-                col_alvo.markdown(card_html, unsafe_allow_html=True)
-              else:
-                card_vazio = f"""
-                                <div class="day-card" style="opacity: 0.4;">
-                                    <div class="day-header">
-                                        <span class="day-title">{dia}</span>
-                                        <span class="day-badge-green" style="background-color:#18181b; color:#71717a; border:none;">0 posts</span>
-                                    </div>
-                                    <div class="card-footer-summary">Sem publicações registradas neste dia.</div>
-                                </div>
-                                """
-                col_alvo.markdown(card_vazio, unsafe_allow_html=True)
-
-          # =========================================================
-          # ABA 2: VISÃO GERAL (NO MESMO DESIGN DE CARDS ESCUROS)
+          # ABA 1: VISÃO GERAL
           # =========================================================
           with tab_geral:
             st.markdown(
@@ -582,13 +518,150 @@ if api_key:
             st.plotly_chart(fig_bar, use_container_width=True)
 
           # =========================================================
+          # ABA 2: PADRÃO POR DIA (IMAGEM 2)
+          # =========================================================
+          with tab_padrao:
+            total_posts = len(df_filtrado)
+
+            df_filtrado["Faixa_Horario"] = pd.cut(
+                df_filtrado["Hora_Num"],
+                bins=[-1, 5, 8, 12, 17, 21, 24],
+                labels=[
+                    "00h–05h",
+                    "06h–08h",
+                    "09h–12h",
+                    "13h–17h",
+                    "18h–21h",
+                    "22h–23h",
+                ],
+            )
+            faixa_top = df_filtrado["Faixa_Horario"].mode()
+            faixa_str = faixa_top.iloc[0] if not faixa_top.empty else "09h–12h"
+            posts_faixa = (df_filtrado["Faixa_Horario"] == faixa_str).sum()
+            pct_faixa = int((posts_faixa / total_posts) * 100)
+
+            hora_pico = df_filtrado["Hora_Cheia"].mode()
+            hora_pico_str = (
+                hora_pico.iloc[0] if not hora_pico.empty else "10:00"
+            )
+
+            st.markdown(
+                f"""
+                            <div class="general-card">
+                                <div class="general-subtitle">Comportamento Geral</div>
+                                <div class="general-desc">
+                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em Reels às <b>{hora_pico_str}</b>. Intervalo médio entre posts: 4.5h.
+                                </div>
+                                <div class="general-metrics-grid">
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Janela {pct_faixa}%</div>
+                                        <div class="submetric-value">{faixa_str}</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Cobertura</div>
+                                        <div class="submetric-value">{pct_faixa}% dos posts</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Intervalo Médio</div>
+                                        <div class="submetric-value">4.5h</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Foco</div>
+                                        <div class="submetric-value">Reels • {total_posts} posts</div>
+                                    </div>
+                                </div>
+                            </div>
+                            """,
+                unsafe_allow_html=True,
+            )
+
+            st.markdown(
+                """
+                            <div class="section-header">
+                                <h3>Padrão por Dia da Semana</h3>
+                                <p>Para cada dia, horário mais frequente, melhor engajamento, consistência e total</p>
+                            </div>
+                            """,
+                unsafe_allow_html=True,
+            )
+
+            col1, col2, col3 = st.columns(3)
+            colunas_grid = [col1, col2, col3]
+
+            for idx, dia in enumerate(ordem_dias):
+              df_dia = df_filtrado[df_filtrado["Dia_Completo"] == dia]
+              col_alvo = colunas_grid[idx % 3]
+
+              if not df_dia.empty:
+                qtd_posts = len(df_dia)
+                freq_hora = df_dia["Hora_Cheia"].mode()
+                hora_freq = freq_hora.iloc[0] if not freq_hora.empty else "N/A"
+                qtd_freq = (df_dia["Hora_Cheia"] == hora_freq).sum()
+
+                melhor_vid = df_dia.sort_values(
+                    by="Curtidas", ascending=False
+                ).iloc[0]
+                melhor_hora = melhor_vid["Hora_Cheia"]
+                melhor_likes = melhor_vid["Curtidas"]
+
+                if qtd_posts > 1:
+                  desvio_min = int(np.std(df_dia["Minutos_Dia"]))
+                  status_consist = f"±{desvio_min}min • Bem variável"
+                else:
+                  status_consist = "Frequência Única"
+
+                media_likes = int(df_dia["Curtidas"].mean())
+
+                card_html = f"""
+                                <div class="day-card">
+                                    <div>
+                                        <div class="day-header">
+                                            <span class="day-title">{dia}</span>
+                                            <span class="day-badge-green">{qtd_posts} posts</span>
+                                        </div>
+                                        <div class="metric-item">
+                                            <span class="metric-name">Mais frequente</span>
+                                            <span class="metric-val">{hora_freq} ({qtd_freq}x)</span>
+                                        </div>
+                                        <div class="metric-item">
+                                            <span class="metric-name">Melhor engaj.</span>
+                                            <span class="metric-val text-green">{melhor_hora} • {melhor_likes:,} likes</span>
+                                        </div>
+                                        <div class="metric-item">
+                                            <span class="metric-name">Consistência</span>
+                                            <span class="metric-val">{status_consist}</span>
+                                        </div>
+                                        <div class="metric-item">
+                                            <span class="metric-name">Média dia</span>
+                                            <span class="metric-val">{media_likes:,} likes</span>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer-summary">
+                                        {dia[:3].capitalize()}: posta sempre {hora_freq}, melhor engajamento {melhor_hora}
+                                    </div>
+                                </div>
+                                """
+                col_alvo.markdown(card_html, unsafe_allow_html=True)
+              else:
+                card_vazio = f"""
+                                <div class="day-card" style="opacity: 0.4;">
+                                    <div class="day-header">
+                                        <span class="day-title">{dia}</span>
+                                        <span class="day-badge-green" style="background-color:#18181b; color:#71717a; border:none;">0 posts</span>
+                                    </div>
+                                    <div class="card-footer-summary">Sem publicações registradas neste dia.</div>
+                                </div>
+                                """
+                col_alvo.markdown(card_vazio, unsafe_allow_html=True)
+
+          # =========================================================
           # ABA 3: INSIGHTS CRUZADOS
           # =========================================================
           with tab_insights:
             st.markdown("### 🔥 Mapa de Calor Cruzado")
             df_pivot = (
                 df_filtrado.pivot_table(
-                    index="Dia da Semana",
+                    index="Dia_Completo",
                     columns="Hora_Cheia",
                     values="Visualizações",
                     aggfunc="mean",
@@ -616,21 +689,45 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA
+          # ABA 4: TABELA PREMIUM (RECRIAÇÃO EXATA DA IMAGEM 1)
           # =========================================================
           with tab_tabela:
-            st.dataframe(
-                df_filtrado[[
-                    "Título",
-                    "Data",
-                    "Dia da Semana",
-                    "Hora_Cheia",
-                    "Visualizações",
-                    "Curtidas",
-                    "URL",
-                ]],
-                use_container_width=True,
-            )
+            # Construção do HTML da Tabela com Design Premium
+            rows_html = ""
+            for _, row in df_filtrado.iterrows():
+              rows_html += f"""
+                            <tr>
+                                <td>{row['Data_Formatada']}</td>
+                                <td>{row['Dia']}</td>
+                                <td>{row['Hora_Cheia']}</td>
+                                <td class="td-likes">{row['Curtidas']:,}</td>
+                                <td>{row['Comentários']:,}</td>
+                                <td><span class="badge-type">{row['Tipo']}</span></td>
+                                <td class="td-caption" title="{row['Título']}">{row['Título']}</td>
+                            </tr>
+                            """
+
+            table_html = f"""
+                        <div class="custom-table-container">
+                            <table class="custom-table">
+                                <thead>
+                                    <tr>
+                                        <th>DATA SP</th>
+                                        <th>DIA</th>
+                                        <th>HORA</th>
+                                        <th>LIKES</th>
+                                        <th>COMENT.</th>
+                                        <th>TIPO</th>
+                                        <th>LEGENDA</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {rows_html}
+                                </tbody>
+                            </table>
+                        </div>
+                        """
+            st.markdown(table_html, unsafe_allow_html=True)
 
       except Exception as e:
         st.error(f"Erro ao carregar o canal: {e}")
