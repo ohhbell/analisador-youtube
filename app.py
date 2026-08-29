@@ -1,3 +1,4 @@
+import math
 import numpy as np
 import pandas as pd
 import plotly.express as px
@@ -6,11 +7,11 @@ import streamlit.components.v1 as components
 from googleapiclient.discovery import build
 
 # =========================================================
-# CONFIGURAÇÃO DE PÁGINA E CSS PREMIUM
+# CONFIGURAÇÃO DE PÁGINA E CSS YOUTUBE RED (DARK PREMIUM)
 # =========================================================
 st.set_page_config(
-    page_title="Analisador de Horários",
-    page_icon="🟢",
+    page_title="Analisador de Horários - YouTube",
+    page_icon="🔴",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -20,7 +21,7 @@ st.markdown(
     <style>
         /* Fundo Geral Ultra Escuro */
         .stApp {
-            background-color: #08080a !important;
+            background-color: #0b0b0e !important;
             color: #a1a1aa !important;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
@@ -33,14 +34,14 @@ st.markdown(
 
         /* Estilização dos Inputs superiores */
         .stTextInput input, .stSelectbox > div > div {
-            background-color: #121215 !important;
+            background-color: #121217 !important;
             color: #f4f4f5 !important;
-            border: 1px solid #222226 !important;
+            border: 1px solid #22222a !important;
             border-radius: 8px !important;
         }
         .stTextInput input:focus, .stSelectbox > div > div:focus {
-            border-color: #22c55e !important;
-            box-shadow: none !important;
+            border-color: #ef4444 !important;
+            box-shadow: 0 0 0 1px #ef4444 !important;
         }
         .stTextInput label, .stSelectbox label {
             color: #a1a1aa !important;
@@ -61,8 +62,8 @@ st.markdown(
             align-items: center;
             gap: 12px;
         }
-        .avatar-green {
-            background-color: #16a34a;
+        .avatar-red-logo {
+            background-color: #ff0000;
             color: #ffffff;
             font-weight: bold;
             font-size: 1.1rem;
@@ -72,6 +73,7 @@ st.markdown(
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 14px rgba(255, 0, 0, 0.35);
         }
         .header-text h2 {
             color: #f4f4f5 !important;
@@ -86,13 +88,48 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* ESTILIZAÇÃO ULTRA FORÇADA DAS TABS (BOTÃO BRANCO ATIVO) */
+        /* CARD DE INFORMAÇÕES DO CANAL (FOTO + NOME + INSCRITOS) */
+        .channel-profile-card {
+            background-color: #121217;
+            border: 1px solid #22222a;
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .channel-avatar-img {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: 2px solid #ef4444;
+            object-fit: cover;
+        }
+        .channel-info h3 {
+            color: #ffffff !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            margin: 0 0 4px 0 !important;
+        }
+        .channel-sub-count {
+            background-color: #270909;
+            color: #ef4444;
+            border: 1px solid #7f1d1d;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        /* ESTILIZAÇÃO DAS TABS (BOTÃO BRANCO ATIVO COM DESTAQUE VERMELHO) */
         div[data-baseweb="tab-list"] {
             gap: 6px !important;
-            background-color: #121215 !important;
+            background-color: #121217 !important;
             padding: 6px !important;
             border-radius: 12px !important;
-            border: 1px solid #1c1c20 !important;
+            border: 1px solid #22222a !important;
             display: inline-flex !important;
             margin-bottom: 25px !important;
         }
@@ -115,7 +152,7 @@ st.markdown(
         div[data-baseweb="tab-list"] button[aria-selected="true"] {
             background-color: #ffffff !important;
             border-radius: 8px !important;
-            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4) !important;
+            box-shadow: 0px 4px 12px rgba(255, 0, 0, 0.2) !important;
         }
 
         div[data-baseweb="tab-list"] button[aria-selected="true"] p {
@@ -123,18 +160,14 @@ st.markdown(
             font-weight: 700 !important;
         }
 
-        div[data-baseweb="tab-highlight-point"] {
-            display: none !important;
-        }
-        
-        div[data-baseweb="tab-border-highlight"] {
+        div[data-baseweb="tab-highlight-point"], div[data-baseweb="tab-border-highlight"] {
             display: none !important;
         }
 
         /* CARD COMPORTAMENTO GERAL */
         .general-card {
-            background-color: #121215;
-            border: 1px solid #1c1c20;
+            background-color: #121217;
+            border: 1px solid #22222a;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 25px;
@@ -142,7 +175,7 @@ st.markdown(
         .general-subtitle {
             font-size: 0.7rem;
             font-weight: 700;
-            color: #71717a;
+            color: #ef4444;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             margin-bottom: 6px;
@@ -159,8 +192,8 @@ st.markdown(
             gap: 12px;
         }
         .submetric-box {
-            background-color: #08080a;
-            border: 1px solid #1c1c20;
+            background-color: #0b0b0e;
+            border: 1px solid #1c1c24;
             border-radius: 8px;
             padding: 12px 14px;
         }
@@ -195,8 +228,8 @@ st.markdown(
         }
 
         .day-card {
-            background-color: #121215;
-            border: 1px solid #1c1c20;
+            background-color: #121217;
+            border: 1px solid #22222a;
             border-radius: 10px;
             padding: 16px;
             margin-bottom: 16px;
@@ -217,10 +250,10 @@ st.markdown(
             font-weight: 600;
             margin: 0;
         }
-        .day-badge-green {
-            background-color: #052e16;
-            color: #22c55e;
-            border: 1px solid #14532d;
+        .day-badge-red {
+            background-color: #270909;
+            color: #ef4444;
+            border: 1px solid #7f1d1d;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 0.75rem;
@@ -241,15 +274,15 @@ st.markdown(
             color: #e4e4e7;
             font-weight: 500;
         }
-        .text-green {
-            color: #22c55e !important;
+        .text-red {
+            color: #f87171 !important;
             font-weight: 600;
         }
 
         .card-footer-summary {
             font-size: 0.75rem;
             color: #71717a;
-            border-top: 1px dashed #1c1c20;
+            border-top: 1px dashed #22222a;
             padding-top: 10px;
             margin-top: 6px;
         }
@@ -282,95 +315,114 @@ ordem_dias = [
 api_key = st.secrets.get('YOUTUBE_API_KEY')
 
 
-# --- COLETA DE DADOS ---
+# --- FORMATADOR DE NÚMERO DE INSCRITOS ---
+def formatar_numero(num):
+  if num is None:
+    return "N/A"
+  num = int(num)
+  if num >= 1_000_000:
+    return f"{num / 1_000_000:.1f}M"
+  elif num >= 1_000:
+    return f"{num / 1_000:.1f}K"
+  return str(num)
+
+
+# --- COLETA DE DADOS DO CANAL E VÍDEOS ---
 def buscar_dados_canal(youtube_api, channel_id, max_results):
   res = (
       youtube_api.channels()
-      .list(id=channel_id, part='contentDetails,snippet')
+      .list(id=channel_id, part="contentDetails,snippet,statistics")
       .execute()
   )
-  if not res['items']:
-    return None, None
+  if not res["items"]:
+    return None, None, None
 
-  nome_canal = res['items'][0]['snippet']['title']
-  playlist_id = res['items'][0]['contentDetails']['relatedPlaylists']['uploads']
+  canal_info = res["items"][0]
+  detalhes_canal = {
+      "nome": canal_info["snippet"]["title"],
+      "foto": canal_info["snippet"]["thumbnails"]["medium"]["url"],
+      "inscritos": formatar_numero(
+          canal_info["statistics"].get("subscriberCount")
+      ),
+  }
+
+  playlist_id = canal_info["contentDetails"]["relatedPlaylists"]["uploads"]
 
   playlist_res = (
       youtube_api.playlistItems()
-      .list(playlistId=playlist_id, part='snippet', maxResults=max_results)
+      .list(playlistId=playlist_id, part="snippet", maxResults=max_results)
       .execute()
   )
 
   video_ids = [
-      item['snippet']['resourceId']['videoId'] for item in playlist_res['items']
+      item["snippet"]["resourceId"]["videoId"] for item in playlist_res["items"]
   ]
 
   stats_res = (
       youtube_api.videos()
-      .list(id=','.join(video_ids), part='snippet,statistics,contentDetails')
+      .list(id=",".join(video_ids), part="snippet,statistics,contentDetails")
       .execute()
   )
 
   dados = []
-  for item in stats_res['items']:
-    data_utc = pd.to_datetime(item['snippet']['publishedAt'])
-    data_br = data_utc.tz_convert('America/Sao_Paulo')
+  for item in stats_res["items"]:
+    data_utc = pd.to_datetime(item["snippet"]["publishedAt"])
+    data_br = data_utc.tz_convert("America/Sao_Paulo")
 
-    views = int(item['statistics'].get('viewCount', 0))
-    likes = int(item['statistics'].get('likeCount', 0))
-    comentarios = int(item['statistics'].get('commentCount', 0))
+    views = int(item["statistics"].get("viewCount", 0))
+    likes = int(item["statistics"].get("likeCount", 0))
+    comentarios = int(item["statistics"].get("commentCount", 0))
 
-    # Identificação real do tipo do conteúdo no YouTube (Shorts vs Vídeo)
-    duration_iso = item.get('contentDetails', {}).get('duration', '')
+    duration_iso = item.get("contentDetails", {}).get("duration", "")
     is_short = (
-        'M' not in duration_iso
-        and 'H' not in duration_iso
-        and ('S' in duration_iso or duration_iso == 'PT0S')
+        "M" not in duration_iso
+        and "H" not in duration_iso
+        and ("S" in duration_iso or duration_iso == "PT0S")
     )
-    tipo_conteudo = 'SHORTS' if is_short else 'VÍDEO'
+    tipo_conteudo = "SHORTS" if is_short else "VÍDEO"
 
     dados.append({
-        'Canal': nome_canal,
-        'Título': item['snippet']['title'],
-        'Data_Formatada': data_br.strftime('%d/%m/%Y %H:%M'),
-        'Data': data_br.date(),
-        'Dia': dias_semana_pt[data_br.strftime('%A')],
-        'Dia_Completo': (
-            'Domingo'
-            if data_br.strftime('%A') == 'Sunday'
+        "Canal": detalhes_canal["nome"],
+        "Título": item["snippet"]["title"],
+        "Data_Formatada": data_br.strftime("%d/%m/%Y %H:%M"),
+        "Data": data_br.date(),
+        "Dia": dias_semana_pt[data_br.strftime("%A")],
+        "Dia_Completo": (
+            "Domingo"
+            if data_br.strftime("%A") == "Sunday"
             else (
-                'Segunda'
-                if data_br.strftime('%A') == 'Monday'
+                "Segunda"
+                if data_br.strftime("%A") == "Monday"
                 else (
-                    'Terça'
-                    if data_br.strftime('%A') == 'Tuesday'
+                    "Terça"
+                    if data_br.strftime("%A") == "Tuesday"
                     else (
-                        'Quarta'
-                        if data_br.strftime('%A') == 'Wednesday'
+                        "Quarta"
+                        if data_br.strftime("%A") == "Wednesday"
                         else (
-                            'Quinta'
-                            if data_br.strftime('%A') == 'Thursday'
+                            "Quinta"
+                            if data_br.strftime("%A") == "Thursday"
                             else (
-                                'Sexta'
-                                if data_br.strftime('%A') == 'Friday'
-                                else 'Sábado'
+                                "Sexta"
+                                if data_br.strftime("%A") == "Friday"
+                                else "Sábado"
                             )
                         )
                     )
                 )
             )
         ),
-        'Hora_Cheia': f'{data_br.hour:02d}:00',
-        'Hora_Num': data_br.hour,
-        'Minutos_Dia': data_br.hour * 60 + data_br.minute,
-        'Visualizações': views,
-        'Curtidas': likes,
-        'Comentários': comentarios,
-        'Tipo': tipo_conteudo,
-        'URL': f"https://www.youtube.com/watch?v={item['id']}",
+        "Hora_Cheia": f"{data_br.hour:02d}:00",
+        "Hora_Num": data_br.hour,
+        "Minutos_Dia": data_br.hour * 60 + data_br.minute,
+        "Visualizações": views,
+        "Curtidas": likes,
+        "Comentários": comentarios,
+        "Tipo": tipo_conteudo,
+        "URL": f"https://www.youtube.com/watch?v={item['id']}",
     })
 
-  return nome_canal, pd.DataFrame(dados)
+  return detalhes_canal["nome"], pd.DataFrame(dados), detalhes_canal
 
 
 # --- HEADER PRINCIPAL ---
@@ -378,14 +430,14 @@ st.markdown(
     """
     <div class="app-header">
         <div class="app-title-box">
-            <div class="avatar-green">A</div>
+            <div class="avatar-red-logo">▶</div>
             <div class="header-text">
                 <h2>Analisador de Horários</h2>
-                <p>Descubra quando seu público engaja mais</p>
+                <p>Descubra quando seu público engaja mais no YouTube</p>
             </div>
         </div>
-        <div style="font-size: 0.75rem; color: #22c55e; display: flex; align-items: center; gap: 6px;">
-            <span style="height: 8px; width: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block;"></span>
+        <div style="font-size: 0.75rem; color: #ef4444; display: flex; align-items: center; gap: 6px;">
+            <span style="height: 8px; width: 8px; background-color: #ef4444; border-radius: 50%; display: inline-block;"></span>
             client-side • token local
         </div>
     </div>
@@ -419,14 +471,28 @@ if api_key:
   if modo_app == "Análise Única":
     if channel_id:
       try:
-        with st.spinner("Buscando dados do canal..."):
-          nome_canal, df = buscar_dados_canal(
+        with st.spinner("Buscando dados e perfil do canal..."):
+          nome_canal, df, detalhes_canal = buscar_dados_canal(
               youtube, channel_id, max_results
           )
 
         if df is None:
           st.error("Canal não encontrado. Verifique se o ID está correto.")
         else:
+          # CARD DO PERFIL DO CANAL
+          st.markdown(
+              f"""
+                            <div class="channel-profile-card">
+                                <img src="{detalhes_canal['foto']}" class="channel-avatar-img" alt="Avatar">
+                                <div class="channel-info">
+                                    <h3>{detalhes_canal['nome']}</h3>
+                                    <span class="channel-sub-count">{detalhes_canal['inscritos']} inscritos</span>
+                                </div>
+                            </div>
+                            """,
+              unsafe_allow_html=True,
+          )
+
           df_filtrado = df
 
           # BOTÕES DE ALTERNÂNCIA SUPERIORES
@@ -447,7 +513,7 @@ if api_key:
                                 <div class="general-subtitle">Resumo de Performance</div>
                                 <div class="general-metrics-grid">
                                     <div class="submetric-box">
-                                        <div class="submetric-label">Conteúdos Analisados</div>
+                                        <div class="submetric-label">Vídeos Analisados</div>
                                         <div class="submetric-value">{len(df_filtrado)}</div>
                                     </div>
                                     <div class="submetric-box">
@@ -475,7 +541,7 @@ if api_key:
                 x="Hora_Cheia",
                 y="Visualizações",
                 title="Média de Views por Horário",
-                color_discrete_sequence=["#22c55e"],
+                color_discrete_sequence=["#ef4444"],
             )
             fig_bar.update_layout(
                 template="plotly_dark",
@@ -518,7 +584,7 @@ if api_key:
                             <div class="general-card">
                                 <div class="general-subtitle">Comportamento Geral</div>
                                 <div class="general-desc">
-                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em conteúdo às <b>{hora_pico_str}</b>. Intervalo médio entre posts: 4.5h.
+                                    Essa conta posta <b>{pct_faixa}% das vezes entre {faixa_str}</b> de Seg a Sex, com foco em publicações às <b>{hora_pico_str}</b>. Intervalo médio entre vídeos: 4.5h.
                                 </div>
                                 <div class="general-metrics-grid">
                                     <div class="submetric-box">
@@ -527,15 +593,15 @@ if api_key:
                                     </div>
                                     <div class="submetric-box">
                                         <div class="submetric-label">Cobertura</div>
-                                        <div class="submetric-value">{pct_faixa}% dos posts</div>
+                                        <div class="submetric-value">{pct_faixa}% dos vídeos</div>
                                     </div>
                                     <div class="submetric-box">
                                         <div class="submetric-label">Intervalo Médio</div>
                                         <div class="submetric-value">4.5h</div>
                                     </div>
                                     <div class="submetric-box">
-                                        <div class="submetric-label">Total</div>
-                                        <div class="submetric-value">{total_posts} posts</div>
+                                        <div class="submetric-label">Total Analisado</div>
+                                        <div class="submetric-value">{total_posts} vídeos</div>
                                     </div>
                                 </div>
                             </div>
@@ -585,7 +651,7 @@ if api_key:
                                     <div>
                                         <div class="day-header">
                                             <span class="day-title">{dia}</span>
-                                            <span class="day-badge-green">{qtd_posts} posts</span>
+                                            <span class="day-badge-red">{qtd_posts} vídeos</span>
                                         </div>
                                         <div class="metric-item">
                                             <span class="metric-name">Mais frequente</span>
@@ -593,7 +659,7 @@ if api_key:
                                         </div>
                                         <div class="metric-item">
                                             <span class="metric-name">Melhor engaj.</span>
-                                            <span class="metric-val text-green">{melhor_hora} • {melhor_likes:,} likes</span>
+                                            <span class="metric-val text-red">{melhor_hora} • {melhor_likes:,} likes</span>
                                         </div>
                                         <div class="metric-item">
                                             <span class="metric-name">Consistência</span>
@@ -615,7 +681,7 @@ if api_key:
                                 <div class="day-card" style="opacity: 0.4;">
                                     <div class="day-header">
                                         <span class="day-title">{dia}</span>
-                                        <span class="day-badge-green" style="background-color:#18181b; color:#71717a; border:none;">0 posts</span>
+                                        <span class="day-badge-red" style="background-color:#18181b; color:#71717a; border:none;">0 vídeos</span>
                                     </div>
                                     <div class="card-footer-summary">Sem publicações registradas neste dia.</div>
                                 </div>
@@ -645,7 +711,7 @@ if api_key:
                 ),
                 x=df_pivot.columns,
                 y=df_pivot.index,
-                color_continuous_scale="Greens",
+                color_continuous_scale="Reds",
                 aspect="auto",
             )
             fig_heat.update_layout(
@@ -657,7 +723,7 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA PREMIUM (DESIGN COMPREENSÍVEL E ISOLADO)
+          # ABA 4: TABELA PREMIUM (TEMA YOUTUBE RED)
           # =========================================================
           with tab_tabela:
             rows_html = ""
@@ -689,9 +755,9 @@ if api_key:
                             .custom-table-container {{
                                 width: 100%;
                                 overflow-x: auto;
-                                border: 1px solid #1c1c20;
+                                border: 1px solid #22222a;
                                 border-radius: 10px;
-                                background-color: #0c0c0e;
+                                background-color: #0d0d12;
                             }}
                             .custom-table {{
                                 width: 100%;
@@ -701,31 +767,31 @@ if api_key:
                                 text-align: left;
                             }}
                             .custom-table th {{
-                                background-color: #121215;
+                                background-color: #121217;
                                 color: #71717a;
                                 font-size: 0.7rem;
                                 font-weight: 700;
                                 text-transform: uppercase;
                                 letter-spacing: 0.05em;
                                 padding: 12px 16px;
-                                border-bottom: 1px solid #1c1c20;
+                                border-bottom: 1px solid #22222a;
                             }}
                             .custom-table td {{
                                 padding: 12px 16px;
-                                border-bottom: 1px solid #16161a;
+                                border-bottom: 1px solid #16161e;
                                 white-space: nowrap;
                             }}
                             .custom-table tr:hover {{
-                                background-color: #121215;
+                                background-color: #14141c;
                             }}
                             .td-likes {{
-                                color: #22c55e !important;
+                                color: #f87171 !important;
                                 font-weight: 700;
                             }}
                             .badge-type {{
-                                background-color: #18181b;
-                                color: #71717a;
-                                border: 1px solid #27272a;
+                                background-color: #1f1414;
+                                color: #ef4444;
+                                border: 1px solid #451a1a;
                                 padding: 2px 8px;
                                 border-radius: 10px;
                                 font-size: 0.65rem;
@@ -786,11 +852,14 @@ if api_key:
     if id1 and id2:
       try:
         with st.spinner("Buscando dados comparativos..."):
-          nome1, df1 = buscar_dados_canal(youtube, id1, max_results)
-          nome2, df2 = buscar_dados_canal(youtube, id2, max_results)
+          nome1, df1, det1 = buscar_dados_canal(youtube, id1, max_results)
+          nome2, df2, det2 = buscar_dados_canal(youtube, id2, max_results)
 
         if df1 is not None and df2 is not None:
-          st.subheader(f"{nome1} vs {nome2}")
+          st.subheader(
+              f"{det1['nome']} ({det1['inscritos']}) vs {det2['nome']}"
+              f" ({det2['inscritos']})"
+          )
           df_comb = pd.concat([df1, df2])
           fig_comp = px.bar(
               df_comb.groupby(["Canal", "Hora_Cheia"])["Visualizações"]
@@ -800,7 +869,7 @@ if api_key:
               y="Visualizações",
               color="Canal",
               barmode="group",
-              color_discrete_sequence=["#22c55e", "#38bdf8"],
+              color_discrete_sequence=["#ef4444", "#38bdf8"],
           )
           fig_comp.update_layout(
               template="plotly_dark",
