@@ -233,7 +233,7 @@ st.markdown(
             border-radius: 10px;
             padding: 16px;
             margin-bottom: 16px;
-            min-height: 220px;
+            min-height: 250px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -315,7 +315,7 @@ ordem_dias = [
 api_key = st.secrets.get('YOUTUBE_API_KEY')
 
 
-# --- FORMATADOR DE NÚMERO DE INSCRITOS ---
+# --- FORMATADOR DE NÚMEROS (k, M) ---
 def formatar_numero(num):
   if num is None:
     return "N/A"
@@ -613,7 +613,7 @@ if api_key:
                 """
                             <div class="section-header">
                                 <h3>Padrão por Dia da Semana</h3>
-                                <p>Para cada dia, horário mais frequente, melhor engajamento, consistência e total</p>
+                                <p>Para cada dia, horário mais frequente, melhor engajamento (views/likes) e médias</p>
                             </div>
                             """,
                 unsafe_allow_html=True,
@@ -632,18 +632,21 @@ if api_key:
                 hora_freq = freq_hora.iloc[0] if not freq_hora.empty else "N/A"
                 qtd_freq = (df_dia["Hora_Cheia"] == hora_freq).sum()
 
-                melhor_vid = df_dia.sort_values(
+                # Vídeo mais visto no dia
+                melhor_vid_views = df_dia.sort_values(
+                    by="Visualizações", ascending=False
+                ).iloc[0]
+                melhor_hora_views = melhor_vid_views["Hora_Cheia"]
+                melhor_views = melhor_vid_views["Visualizações"]
+
+                # Vídeo mais curtido no dia
+                melhor_vid_likes = df_dia.sort_values(
                     by="Curtidas", ascending=False
                 ).iloc[0]
-                melhor_hora = melhor_vid["Hora_Cheia"]
-                melhor_likes = melhor_vid["Curtidas"]
+                melhor_hora_likes = melhor_vid_likes["Hora_Cheia"]
+                melhor_likes = melhor_vid_likes["Curtidas"]
 
-                if qtd_posts > 1:
-                  desvio_min = int(np.std(df_dia["Minutos_Dia"]))
-                  status_consist = f"±{desvio_min}min • Bem variável"
-                else:
-                  status_consist = "Frequência Única"
-
+                media_views = int(df_dia["Visualizações"].mean())
                 media_likes = int(df_dia["Curtidas"].mean())
 
                 card_html = f"""
@@ -658,20 +661,24 @@ if api_key:
                                             <span class="metric-val">{hora_freq} ({qtd_freq}x)</span>
                                         </div>
                                         <div class="metric-item">
-                                            <span class="metric-name">Melhor engaj.</span>
-                                            <span class="metric-val text-red">{melhor_hora} • {melhor_likes:,} likes</span>
+                                            <span class="metric-name">Melhor views</span>
+                                            <span class="metric-val text-red">{melhor_hora_views} • {melhor_views:,}</span>
                                         </div>
                                         <div class="metric-item">
-                                            <span class="metric-name">Consistência</span>
-                                            <span class="metric-val">{status_consist}</span>
+                                            <span class="metric-name">Melhor likes</span>
+                                            <span class="metric-val">{melhor_hora_likes} • {melhor_likes:,}</span>
                                         </div>
                                         <div class="metric-item">
-                                            <span class="metric-name">Média dia</span>
-                                            <span class="metric-val">{media_likes:,} likes</span>
+                                            <span class="metric-name">Média views</span>
+                                            <span class="metric-val">{media_views:,}</span>
+                                        </div>
+                                        <div class="metric-item">
+                                            <span class="metric-name">Média likes</span>
+                                            <span class="metric-val">{media_likes:,}</span>
                                         </div>
                                     </div>
                                     <div class="card-footer-summary">
-                                        {dia[:3].capitalize()}: posta sempre {hora_freq}, melhor engajamento {melhor_hora}
+                                        {dia[:3].capitalize()}: posta sempre {hora_freq}, melhor visualização às {melhor_hora_views}
                                     </div>
                                 </div>
                                 """
@@ -723,7 +730,7 @@ if api_key:
             st.plotly_chart(fig_heat, use_container_width=True)
 
           # =========================================================
-          # ABA 4: TABELA PREMIUM COM BOTÃO CLICÁVEL PRO VÍDEO
+          # ABA 4: TABELA PREMIUM COM VIEWS E BOTÃO CLICÁVEL
           # =========================================================
           with tab_tabela:
             rows_html = ""
@@ -733,6 +740,7 @@ if api_key:
                                 <td>{row['Data_Formatada']}</td>
                                 <td>{row['Dia']}</td>
                                 <td>{row['Hora_Cheia']}</td>
+                                <td class="td-views">{row['Visualizações']:,}</td>
                                 <td class="td-likes">{row['Curtidas']:,}</td>
                                 <td>{row['Comentários']:,}</td>
                                 <td><span class="badge-type">{row['Tipo']}</span></td>
@@ -790,9 +798,13 @@ if api_key:
                             .custom-table tr:hover {{
                                 background-color: #14141c;
                             }}
+                            .td-views {{
+                                color: #ffffff !important;
+                                font-weight: 700;
+                            }}
                             .td-likes {{
                                 color: #f87171 !important;
-                                font-weight: 700;
+                                font-weight: 600;
                             }}
                             .badge-type {{
                                 background-color: #1f1414;
@@ -811,7 +823,6 @@ if api_key:
                                 white-space: nowrap;
                                 color: #d4d4d8;
                             }}
-                            /* ESTILO DO BOTÃO DE LINK DO VÍDEO */
                             .btn-watch {{
                                 display: inline-block;
                                 background-color: #270909;
@@ -840,6 +851,7 @@ if api_key:
                                             <th>DATA SP</th>
                                             <th>DIA</th>
                                             <th>HORA</th>
+                                            <th>VIEWS</th>
                                             <th>LIKES</th>
                                             <th>COMENT.</th>
                                             <th>TIPO</th>
