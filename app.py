@@ -5,13 +5,13 @@ import streamlit as st
 from googleapiclient.discovery import build
 
 # =========================================================
-# CONFIGURAÇÃO DE PÁGINA E CSS (DARK MINIMALISTA SAAS)
+# CONFIGURAÇÃO DE PÁGINA E CSS UNIFICADO (DESIGN 100% IGUAL AOS CARDS)
 # =========================================================
 st.set_page_config(
     page_title="Analisador de Horários",
     page_icon="🟢",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown(
@@ -29,7 +29,24 @@ st.markdown(
         footer {visibility: hidden;}
         header {visibility: hidden;}
         .stDeployButton {display:none;}
-        
+
+        /* Estilização Completa dos Inputs (Caixas de texto e Seleção) */
+        .stTextInput input, .stSelectbox > div > div {
+            background-color: #141417 !important;
+            color: #f4f4f5 !important;
+            border: 1px solid #27272a !important;
+            border-radius: 8px !important;
+        }
+        .stTextInput input:focus, .stSelectbox > div > div:focus {
+            border-color: #22c55e !important;
+            box-shadow: none !important;
+        }
+        .stTextInput label, .stSelectbox label {
+            color: #a1a1aa !important;
+            font-size: 0.85rem !important;
+            font-weight: 500 !important;
+        }
+
         /* Cabeçalho Superior do App */
         .app-header {
             display: flex;
@@ -115,7 +132,7 @@ st.markdown(
             color: #f4f4f5;
         }
 
-        /* Título da Seção Padrão por Dia */
+        /* Título de Seção */
         .section-header {
             margin-top: 10px;
             margin-bottom: 16px;
@@ -132,7 +149,7 @@ st.markdown(
             margin: 0 !important;
         }
 
-        /* Estilização dos Cards por Dia da Semana */
+        /* Cards Diários */
         .day-card {
             background-color: #141417;
             border: 1px solid #242427;
@@ -186,7 +203,7 @@ st.markdown(
             font-weight: 600;
         }
 
-        /* Footer do Card com o resumo em texto */
+        /* Rodapé do Card */
         .card-footer-summary {
             font-size: 0.75rem;
             color: #71717a;
@@ -195,15 +212,16 @@ st.markdown(
             margin-top: 6px;
         }
 
-        /* Customização de Tabs do Streamlit para o Estilo Pill Dark */
+        /* Customização de Tabs estilo Pill Button Dark */
         .stTabs [data-baseweb="tab-list"] {
             gap: 8px;
             background-color: transparent;
             margin-bottom: 20px;
+            border-bottom: none !important;
         }
         .stTabs [data-baseweb="tab"] {
-            height: 34px;
-            background-color: #18181b;
+            height: 36px;
+            background-color: #141417;
             border: 1px solid #27272a;
             border-radius: 8px;
             color: #a1a1aa;
@@ -216,6 +234,13 @@ st.markdown(
             color: #09090b !important;
             font-weight: 600 !important;
             border-color: #f4f4f5 !important;
+        }
+
+        /* Customização de Tabelas */
+        [data-testid="stDataFrame"] {
+            background-color: #141417 !important;
+            border: 1px solid #27272a !important;
+            border-radius: 10px !important;
         }
     </style>
 """,
@@ -323,7 +348,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# --- CAIXA DE BUSCA DE ID E PARÂMETROS NO TOPO ---
+# --- CAIXA DE BUSCA NO MESMO DESIGN DA PÁGINA ---
 col_search1, col_search2, col_search3 = st.columns([3, 1, 1])
 with col_search1:
   channel_id = st.text_input(
@@ -339,7 +364,9 @@ with col_search3:
       "Modo:", ["Análise Única", "⚔️ Comparativo"]
   )
 
-st.markdown("---")
+st.markdown(
+    "<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True
+)
 
 if api_key:
   youtube = build("youtube", "v3", developerKey=api_key)
@@ -355,18 +382,7 @@ if api_key:
         if df is None:
           st.error("Canal não encontrado. Verifique se o ID está correto.")
         else:
-          # Filtro de Período na barra lateral se quiser ajustar
-          st.sidebar.markdown("### 🗓️ Filtro de Período")
-          data_min, data_max = df["Data"].min(), df["Data"].max()
-          data_inicio, data_fim = st.sidebar.date_input(
-              "Período:",
-              value=(data_min, data_max),
-              min_value=data_min,
-              max_value=data_max,
-          )
-          df_filtrado = df[
-              (df["Data"] >= data_inicio) & (df["Data"] <= data_fim)
-          ]
+          df_filtrado = df
 
           # NAVEGAÇÃO POR ABAS SUPERIORES
           tab_padrao, tab_geral, tab_insights, tab_tabela = st.tabs([
@@ -377,7 +393,7 @@ if api_key:
           ])
 
           # =========================================================
-          # ABA 1: PADRÃO POR DIA (ESTILO EXATO DA SUGESTÃO/IMAGEM)
+          # ABA 1: PADRÃO POR DIA
           # =========================================================
           with tab_padrao:
             total_posts = len(df_filtrado)
@@ -518,18 +534,34 @@ if api_key:
                 col_alvo.markdown(card_vazio, unsafe_allow_html=True)
 
           # =========================================================
-          # ABA 2: VISÃO GERAL
+          # ABA 2: VISÃO GERAL (NO MESMO DESIGN DE CARDS ESCUROS)
           # =========================================================
           with tab_geral:
-            st.markdown("### 📊 Visão Geral da Conta")
-            c1, c2, c3, c4 = st.columns(4)
-            c1.metric("Shorts Analisados", len(df_filtrado))
-            c2.metric("Total de Views", f"{df_filtrado['Visualizações'].sum():,}")
-            c3.metric(
-                "Média de Views", f"{int(df_filtrado['Visualizações'].mean()):,}"
-            )
-            c4.metric(
-                "Média de Likes", f"{int(df_filtrado['Curtidas'].mean()):,}"
+            st.markdown(
+                f"""
+                            <div class="general-card">
+                                <div class="general-subtitle">Resumo de Performance</div>
+                                <div class="general-metrics-grid">
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Shorts Analisados</div>
+                                        <div class="submetric-value">{len(df_filtrado)}</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Total de Views</div>
+                                        <div class="submetric-value">{df_filtrado['Visualizações'].sum():,}</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Média de Views</div>
+                                        <div class="submetric-value">{int(df_filtrado['Visualizações'].mean()):,}</div>
+                                    </div>
+                                    <div class="submetric-box">
+                                        <div class="submetric-label">Média de Likes</div>
+                                        <div class="submetric-value">{int(df_filtrado['Curtidas'].mean()):,}</div>
+                                    </div>
+                                </div>
+                            </div>
+                            """,
+                unsafe_allow_html=True,
             )
 
             fig_bar = px.bar(
@@ -545,6 +577,7 @@ if api_key:
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#a1a1aa"),
             )
             st.plotly_chart(fig_bar, use_container_width=True)
 
@@ -578,6 +611,7 @@ if api_key:
                 template="plotly_dark",
                 paper_bgcolor="rgba(0,0,0,0)",
                 plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#a1a1aa"),
             )
             st.plotly_chart(fig_heat, use_container_width=True)
 
@@ -602,8 +636,8 @@ if api_key:
         st.error(f"Erro ao carregar o canal: {e}")
     else:
       st.info(
-          "👆 Digite ou cole o **ID do Canal** na caixa no topo da tela para"
-          " iniciar a análise."
+          "👆 Digite ou cole o **ID do Canal** na caixa acima para carregar o"
+          " painel."
       )
 
   elif modo_app == "⚔️ Comparativo":
